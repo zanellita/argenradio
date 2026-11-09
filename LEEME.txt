@@ -1,0 +1,34 @@
+ArgenRadio - Project Zomboid Build 42
+
+Instalacion (host y amigo):
+1. Copiar/descomprimir la carpeta ArgenRadio dentro de:
+   %USERPROFILE%\Zomboid\mods
+2. En el juego, activar el mod en la lista de mods.
+3. En el servidor local del host, activar el mismo mod.
+4. Ambos deben usar la misma build (42.21.0) y los mismos archivos de audio.
+
+Estructura (Build 42):
+  ArgenRadio\42\mod.info
+  ArgenRadio\42\poster.png
+  ArgenRadio\42\media\lua\shared\ArgenRadio\ArgenRadio_Defs.lua
+  ArgenRadio\42\media\lua\client\ArgenRadio\ArgenRadio_Audio.lua
+  ArgenRadio\42\media\lua\client\ArgenRadio\ArgenRadio_UI.lua
+  ArgenRadio\42\media\scripts\argenradio_sounds.txt
+  ArgenRadio\42\media\sound\argenradio\...
+
+Importante: en Build 42 el mod.info y la carpeta media van DENTRO de la
+carpeta 42\, no en la raiz del mod.
+
+Musica:
+Cada genero tiene su carpeta dentro de:
+  42\media\sound\argenradio\<genero>\
+Generos: rocknacional, cumbia, cuarteto, lentos, folklore, rkt
+
+Por ahora hay 3 pistas de prueba por genero (track_01.ogg, track_02.ogg,
+track_03.ogg). Son tonos cortos para probar el cambio de tema; se pueden
+reemplazar por musica real manteniendo el mismo nombre de archivo.
+
+La radio elige un tema al azar al empezar. Los botones "Tema anterior" y
+"Tema siguiente" cambian de cancion dentro de la misma emisora, y cuando
+termina un tema pasa solo al siguiente. Para cambiar de emisora, usar la
+lista "Generos" y hacer clic en el genero.

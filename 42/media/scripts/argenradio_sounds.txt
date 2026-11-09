@@ -1,0 +1,165 @@
+module Base
+{
+    sound ArgenRadio_RockNacional_1
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/track_01.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_2
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/track_02.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_3
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/track_03.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Cumbia_1
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/cumbia/track_01.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Cumbia_2
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/cumbia/track_02.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Cumbia_3
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/cumbia/track_03.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Cuarteto_1
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/cuarteto/track_01.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Cuarteto_2
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/cuarteto/track_02.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Cuarteto_3
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/cuarteto/track_03.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Lentos_1
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/lentos/track_01.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Lentos_2
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/lentos/track_02.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Lentos_3
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/lentos/track_03.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Folklore_1
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/folklore/track_01.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Folklore_2
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/folklore/track_02.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_Folklore_3
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/folklore/track_03.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RKT_1
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rkt/track_01.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RKT_2
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rkt/track_02.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RKT_3
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rkt/track_03.ogg,
+            distanceMax = 60,
+        }
+    }
+}

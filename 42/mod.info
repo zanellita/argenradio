@@ -1,0 +1,6 @@
+id=ArgenRadio
+name=ArgenRadio
+description=Radios con musica argentina. Reemplaza la interfaz de radio vanilla (excepto TV y walkie-talkies).
+poster=poster.png
+pzversion=42.21.0
+versionMin=42.0.0
