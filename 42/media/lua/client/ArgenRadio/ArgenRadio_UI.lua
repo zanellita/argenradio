@@ -1,4 +1,4 @@
--- ArgenRadio - ventana de radio (etapa 4)
+-- ArgenRadio - ventana de radio (etapas 4.1 y 5)
 -- Rediseño estilo vanilla: un modulo principal con pantalla de sintonia
 -- (estetica, sin funcion real) y un segundo modulo plegable "Generos".
 -- Se aplica a radios de vehiculo, de casa y portatiles.
@@ -211,11 +211,17 @@ local function installArgenRadioWindow()
 
         self.state = ArgenRadio.Audio.getState(_deviceObject, _deviceType)
         self.stationIndex = self.state.station or 1
+        self.lastMuted = self.state.muted and true or false
         self.volumeBar:setVolume(math.floor(self.state.volume * self.volumeBar:getVolumeSteps()))
         self.volumeBar:setEnableControls(not self.state.muted)
         self.speakerButton.isMute = self.state.muted and true or false
         self.speakerButton:setEnableControls(true)
         self:refreshControls()
+
+        -- Etapa 5: la radio del auto pide el estado autoritativo al servidor.
+        if self.deviceType == "VehiclePart" and ArgenRadio.Net then
+            ArgenRadio.Net.request(self.player, self.device)
+        end
         return true
     end
 
@@ -224,6 +230,7 @@ local function installArgenRadioWindow()
         self.state = nil
         self.stationIndex = 1
         self.lastPlaying = nil
+        self.lastMuted = nil
     end
 
     function RWMArgenRadio:refreshControls()
@@ -301,6 +308,22 @@ local function installArgenRadioWindow()
         if self.state.playing ~= playing then
             self.state.playing = playing
         end
+
+        -- Volumen y mute tambien pueden venir del otro jugador (etapa 5).
+        if self.volumeBar and not self.volumeBar:isDragging() then
+            local steps = self.volumeBar:getVolumeSteps()
+            local barSteps = math.floor((self.state.volume or 0) * steps)
+            if self.volumeBar:getVolume() ~= barSteps then
+                self.volumeBar:setVolume(barSteps)
+            end
+        end
+        if self.lastMuted ~= self.state.muted then
+            self.lastMuted = self.state.muted and true or false
+            self.speakerButton.isMute = self.lastMuted
+            self.volumeBar:setEnableControls(not self.lastMuted)
+            self:refreshControls()
+        end
+
         if self.stationIndex ~= station or self.lastPlaying ~= playing then
             self.stationIndex = station
             self.lastPlaying = playing
@@ -324,6 +347,7 @@ local function installArgenRadioWindow()
         o.state = nil
         o.stationIndex = 1
         o.lastPlaying = nil
+        o.lastMuted = nil
         o.dialX = 0
         o.dialY = 0
         o.dialW = 0

@@ -12,7 +12,9 @@ Estructura (Build 42):
   ArgenRadio\42\poster.png
   ArgenRadio\42\media\lua\shared\ArgenRadio\ArgenRadio_Defs.lua
   ArgenRadio\42\media\lua\client\ArgenRadio\ArgenRadio_Audio.lua
+  ArgenRadio\42\media\lua\client\ArgenRadio\ArgenRadio_Net.lua
   ArgenRadio\42\media\lua\client\ArgenRadio\ArgenRadio_UI.lua
+  ArgenRadio\42\media\lua\server\ArgenRadio\ArgenRadio_Server.lua
   ArgenRadio\42\media\scripts\argenradio_sounds.txt
   ArgenRadio\42\media\sound\argenradio\...
 
@@ -32,3 +34,7 @@ La radio elige un tema al azar al empezar. Los botones "Tema anterior" y
 "Tema siguiente" cambian de cancion dentro de la misma emisora, y cuando
 termina un tema pasa solo al siguiente. Para cambiar de emisora, usar la
 lista "Generos" y hacer clic en el genero.
+
+Multijugador (etapa 5):
+Host y amigo comparten la radio del AUTO: emisora, tema y volumen.
+Las radios de casa y portatiles todavia no se comparten entre jugadores.

@@ -1,0 +1,231 @@
+-- ArgenRadio - sincronizacion multijugador (etapa 5)
+-- El servidor es la autoridad de la radio del auto. Guarda el estado en
+-- vehicle:getModData().argenRadio y lo retransmite por comandos propios.
+-- Cada cliente recrea su sesion local a partir de ese estado.
+--
+-- Alcance de la etapa 5: solo radio de vehiculo. Las radios de casa y las
+-- portatiles siguen con el comportamiento local de la etapa 4.
+
+if not isServer() then return end
+
+ArgenRadio = ArgenRadio or {}
+
+local MODULE = "ArgenRadio"
+local DEFAULT_VOLUME = 0.7
+-- Un poco mas holgada que los 10 tiles a los que se cierra la ventana
+-- vanilla, para tolerar el movimiento del jugador.
+local MAX_INTERACT_DISTANCE = 15
+-- Reenvio periodico: late joiners y vehiculos que se recargan vuelven a
+-- sincronizarse aunque hayan perdido el ultimo cambio.
+local SYNC_INTERVAL_MS = 5000
+
+local lastSyncMs = 0
+
+local function clampVolume(value)
+    value = tonumber(value) or DEFAULT_VOLUME
+    if value < 0 then value = 0 end
+    if value > 1 then value = 1 end
+    return value
+end
+
+local function getState(vehicle)
+    local modData = vehicle:getModData()
+    local state = modData.argenRadio
+    if type(state) ~= "table" then
+        state = {
+            on = false,
+            station = 1,
+            track = 1,
+            volume = DEFAULT_VOLUME,
+            muted = false,
+            revision = 0,
+        }
+        modData.argenRadio = state
+    end
+
+    local _, stationIndex = ArgenRadio.getStation(state.station)
+    local _, trackIndex = ArgenRadio.getTrack(stationIndex, state.track)
+    state.on = state.on == true
+    state.station = stationIndex
+    state.track = trackIndex
+    state.volume = clampVolume(state.volume)
+    state.muted = state.muted == true
+    state.revision = tonumber(state.revision) or 0
+    return state
+end
+
+-- Elige un tema valido; si no viene uno, sortea otro distinto del actual.
+local function pickTrack(station, track, current)
+    local tracks = ArgenRadio.getStationTracks(station)
+    local count = #tracks
+    if count == 0 then return 1 end
+
+    if track then
+        local _, index = ArgenRadio.getTrack(station, track)
+        return index
+    end
+
+    local index = math.floor(ZombRand(count) or 0) + 1
+    if count > 1 and index == current then
+        index = (index % count) + 1
+    end
+    return index
+end
+
+local function makePayload(vehicle, state)
+    return {
+        vehicle = vehicle:getId(),
+        on = state.on,
+        station = state.station,
+        track = state.track,
+        volume = state.volume,
+        muted = state.muted,
+        revision = state.revision,
+    }
+end
+
+-- En un servidor hosteado el cliente local comparte el estado Lua, asi que
+-- aplicamos el cambio en el momento sin esperar el viaje de red.
+local function applyLocalHost(player, vehicle, state)
+    if not isMultiplayer() then return end
+    local localPlayer = getPlayer and getPlayer() or nil
+    if not localPlayer then return end
+    if player and player ~= localPlayer then return end
+    if not (ArgenRadio.Audio and ArgenRadio.Audio.applyRemoteState) then return end
+    ArgenRadio.Audio.applyRemoteState(vehicle:getId(), makePayload(vehicle, state))
+end
+
+local function broadcast(vehicle, state)
+    sendServerCommand(MODULE, "state", makePayload(vehicle, state))
+    applyLocalHost(nil, vehicle, state)
+end
+
+local function reply(player, vehicle, state)
+    sendServerCommand(player, MODULE, "state", makePayload(vehicle, state))
+    applyLocalHost(player, vehicle, state)
+end
+
+local function canInteract(player, vehicle)
+    if not player or not vehicle then return false end
+    local square = vehicle:getSquare()
+    if not square then return false end
+    if not player.DistTo then return false end
+    return player:DistTo(square:getX(), square:getY()) <= MAX_INTERACT_DISTANCE
+end
+
+local function onClientCommand(module, command, player, args)
+    if module ~= MODULE then return end
+    if not player then return end
+
+    args = args or {}
+    local vehicleId = tonumber(args.vehicle)
+    if not vehicleId then return end
+
+    local vehicle = getVehicleById(vehicleId)
+    if not vehicle then return end
+    if not vehicle:getPartById("Radio") then return end
+
+    local state = getState(vehicle)
+
+    -- Consultar no requiere cercania: cualquier cliente puede pedir el
+    -- estado actual al abrir la ventana o al entrar en la zona.
+    if command == "request" then
+        reply(player, vehicle, state)
+        return
+    end
+
+    -- El avance automatico lo gana un solo cliente: el que trae la
+    -- revision vigente. El resto de los clientes recibe el estado nuevo.
+    if command == "advance" then
+        local revision = tonumber(args.revision)
+        if not state.on or not revision or revision ~= state.revision then
+            return
+        end
+        local _, trackIndex = ArgenRadio.getTrack(state.station, state.track + 1)
+        state.track = trackIndex
+        state.revision = state.revision + 1
+        broadcast(vehicle, state)
+        return
+    end
+
+    -- El resto de las acciones exige estar cerca del vehiculo.
+    if not canInteract(player, vehicle) then return end
+
+    local changed = false
+
+    if command == "play" then
+        local _, stationIndex = ArgenRadio.getStation(args.station or state.station)
+        state.station = stationIndex
+        state.track = pickTrack(state.station, args.track, state.track)
+        state.volume = clampVolume(args.volume or state.volume)
+        state.on = true
+        state.revision = state.revision + 1
+        changed = true
+
+    elseif command == "stop" then
+        if state.on then
+            state.on = false
+            state.revision = state.revision + 1
+            changed = true
+        end
+
+    elseif command == "station" then
+        local _, stationIndex = ArgenRadio.getStation(args.station or state.station)
+        state.station = stationIndex
+        state.track = pickTrack(state.station, nil, state.track)
+        state.revision = state.revision + 1
+        changed = true
+
+    elseif command == "track" then
+        local delta = tonumber(args.delta) or 1
+        if delta < 0 then delta = -1 else delta = 1 end
+        local _, trackIndex = ArgenRadio.getTrack(state.station, state.track + delta)
+        state.track = trackIndex
+        state.revision = state.revision + 1
+        changed = true
+
+    elseif command == "volume" then
+        local volume = clampVolume(args.volume)
+        if volume ~= state.volume then
+            state.volume = volume
+            changed = true
+        end
+
+    elseif command == "mute" then
+        local muted = args.muted == true
+        if muted ~= state.muted then
+            state.muted = muted
+            changed = true
+        end
+    end
+
+    if changed then
+        broadcast(vehicle, state)
+    end
+end
+
+-- Reenvio periodico de las radios encendidas. Es barato (solo vehiculos
+-- cargados) y evita que un cliente quede desincronizado tras una recarga.
+local function syncOnRadios()
+    local now = getTimestampMs and getTimestampMs() or 0
+    if now - lastSyncMs < SYNC_INTERVAL_MS then return end
+    lastSyncMs = now
+
+    local cell = getCell and getCell() or nil
+    local vehicles = cell and cell:getVehicles() or nil
+    if not vehicles then return end
+
+    for i = 1, vehicles:size() do
+        local vehicle = vehicles:get(i - 1)
+        local modData = vehicle and vehicle:getModData() or nil
+        local state = modData and modData.argenRadio or nil
+        if type(state) == "table" and state.on == true then
+            broadcast(vehicle, getState(vehicle))
+        end
+    end
+end
+
+Events.OnClientCommand.Add(onClientCommand)
+Events.OnTick.Add(syncOnRadios)
+
+print("[ArgenRadio] Servidor MP listo (etapa 5)")

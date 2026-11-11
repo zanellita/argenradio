@@ -3,7 +3,7 @@
 
 ArgenRadio = ArgenRadio or {}
 
-ArgenRadio.VERSION = "0.4.3"
+ArgenRadio.VERSION = "0.5.0"
 
 -- Cada emisora tiene una carpeta propia dentro de media/sound/argenradio/
 -- y una lista de temas. El campo sound coincide con el sound script de

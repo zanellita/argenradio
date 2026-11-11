@@ -7,6 +7,10 @@
 -- Etapa 4: cada emisora tiene varios temas. El primero se elige al azar y
 -- al terminar uno arranca el siguiente solo. Los botones Tema anterior /
 -- Tema siguiente recorren la lista en orden; la emisora se cambia aparte.
+--
+-- Etapa 5: la radio del vehiculo pasa por el servidor (ver ArgenRadio_Net.lua
+-- y ArgenRadio_Server.lua). Las funciones *Local son el motor de siempre;
+-- la API publica decide entre local y multijugador.
 
 ArgenRadio = ArgenRadio or {}
 ArgenRadio.Audio = ArgenRadio.Audio or {}
@@ -86,6 +90,20 @@ local function deviceKey(device, deviceType)
     return nil
 end
 
+-- Etapa 5: la radio del auto se sincroniza por el servidor. Las radios de
+-- casa y las portatiles siguen siendo locales por ahora.
+local function shouldSync(deviceType)
+    return deviceType == "VehiclePart"
+        and isMultiplayer() == true
+        and ArgenRadio.Net ~= nil
+        and ArgenRadio.Net.isActive()
+end
+
+local function vehicleIdOf(device)
+    local vehicle = device and device.getVehicle and device:getVehicle() or nil
+    return vehicle and vehicle:getId() or nil
+end
+
 local function getTargetPos(device, deviceType, player)
     if deviceType == "VehiclePart" then
         local vehicle = device:getVehicle()
@@ -145,7 +163,7 @@ function Audio.isPlaying(device, deviceType)
     return sessions[key] ~= nil
 end
 
-function Audio.stop(device, deviceType)
+function Audio.stopLocal(device, deviceType)
     local key = deviceKey(device, deviceType)
     if not key then return false end
 
@@ -164,7 +182,7 @@ end
 
 -- Devuelve true si arranco, o false + motivo si no.
 -- track es opcional: si no viene, se elige uno al azar.
-function Audio.play(player, device, deviceType, station, volume, track)
+function Audio.playLocal(player, device, deviceType, station, volume, track)
     if not device then
         return false, "No hay dispositivo"
     end
@@ -251,7 +269,7 @@ function Audio.play(player, device, deviceType, station, volume, track)
 end
 
 -- Cambia de emisora. Si estaba sonando, reinicia con un tema al azar.
-function Audio.setStation(player, device, deviceType, station)
+function Audio.setStationLocal(player, device, deviceType, station)
     if not device then return false, "No hay dispositivo" end
 
     local state = Audio.getState(device, deviceType)
@@ -266,7 +284,7 @@ function Audio.setStation(player, device, deviceType, station)
     state.trackChosen = true
 
     if state.playing then
-        return Audio.play(
+        return Audio.playLocal(
             player, device, deviceType, station, state.volume, state.track)
     end
     return true
@@ -274,7 +292,7 @@ end
 
 -- Cambia de tema dentro de la misma emisora, en orden y dando la vuelta.
 -- delta = 1 (siguiente) o -1 (anterior). Si estaba sonando, lo reproduce.
-function Audio.changeTrack(player, device, deviceType, delta)
+function Audio.changeTrackLocal(player, device, deviceType, delta)
     if not device then return false, "No hay dispositivo" end
 
     local state = Audio.getState(device, deviceType)
@@ -291,7 +309,7 @@ function Audio.changeTrack(player, device, deviceType, delta)
     state.trackChosen = true
 
     if state.playing then
-        return Audio.play(
+        return Audio.playLocal(
             player, device, deviceType, state.station, state.volume, track)
     end
     return true
@@ -306,7 +324,7 @@ function Audio.prevTrack(player, device, deviceType)
     return Audio.changeTrack(player, device, deviceType, -1)
 end
 
-function Audio.setVolume(device, deviceType, volume)
+function Audio.setVolumeLocal(device, deviceType, volume)
     volume = clampVolume(volume)
 
     local state = Audio.getState(device, deviceType)
@@ -323,7 +341,7 @@ function Audio.setVolume(device, deviceType, volume)
     return volume
 end
 
-function Audio.setMuted(device, deviceType, muted)
+function Audio.setMutedLocal(device, deviceType, muted)
     local state = Audio.getState(device, deviceType)
     state.muted = muted and true or false
 
@@ -336,6 +354,151 @@ function Audio.setMuted(device, deviceType, muted)
     end
 
     return state.muted
+end
+
+-- Aplica el estado que manda el servidor. No reenvia comandos: solo
+-- recrea o ajusta la sesion local de audio del vehiculo.
+function Audio.applyRemoteState(vehicleId, data)
+    if not data then return false end
+
+    local vehicle = nil
+    if getVehicleById then
+        vehicle = getVehicleById(vehicleId)
+    end
+    if not vehicle then
+        local cell = getCell and getCell() or nil
+        local vehicles = cell and cell:getVehicles() or nil
+        if not vehicles then return false end
+        for i = 1, vehicles:size() do
+            local candidate = vehicles:get(i - 1)
+            if candidate and candidate:getId() == vehicleId then
+                vehicle = candidate
+                break
+            end
+        end
+    end
+    if not vehicle then return false end
+
+    local part = vehicle:getPartById("Radio")
+    if not part then return false end
+
+    local state = Audio.getState(part, "VehiclePart")
+    local _, stationIndex = ArgenRadio.getStation(data.station or state.station)
+    local _, trackIndex = ArgenRadio.getTrack(stationIndex, data.track or state.track)
+    local volume = clampVolume(data.volume or state.volume)
+    local muted = data.muted == true
+    local on = data.on == true
+
+    state.station = stationIndex
+    state.track = trackIndex
+    state.trackChosen = true
+    state.volume = volume
+    state.muted = muted
+    state.revision = tonumber(data.revision) or state.revision or 0
+
+    local key = deviceKey(part, "VehiclePart")
+    local session = key and sessions[key] or nil
+
+    if not on then
+        if session then
+            Audio.stopLocal(part, "VehiclePart")
+        end
+        state.playing = false
+        return true
+    end
+
+    local soundName = ArgenRadio.getTrackSound(stationIndex, trackIndex)
+    if not soundName then return false end
+
+    -- Mismo tema: solo cambia volumen o mute, no reiniciar el audio.
+    if session and session.soundName == soundName then
+        local actualVolume = muted and 0 or volume
+        session.volume = actualVolume
+        if session.emitter and session.soundID then
+            session.emitter:setVolume(session.soundID, actualVolume)
+        end
+        state.playing = true
+        return true
+    end
+
+    if session then
+        Audio.stopLocal(part, "VehiclePart")
+    end
+    return Audio.playLocal(nil, part, "VehiclePart", stationIndex, volume, trackIndex)
+end
+
+---------------------------------------------------------------
+-- API publica: en multijugador manda el comando al servidor y espera el
+-- estado autoritativo. En un solo jugador ejecuta todo localmente.
+---------------------------------------------------------------
+
+function Audio.play(player, device, deviceType, station, volume, track)
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        if not vehicleId then return false, "No hay dispositivo" end
+        ArgenRadio.Net.send("play", {
+            vehicle = vehicleId,
+            station = station,
+            track = track,
+            volume = volume,
+        })
+        return true
+    end
+    return Audio.playLocal(player, device, deviceType, station, volume, track)
+end
+
+function Audio.stop(device, deviceType)
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        Audio.stopLocal(device, deviceType)
+        if vehicleId then
+            ArgenRadio.Net.send("stop", { vehicle = vehicleId })
+        end
+        return true
+    end
+    return Audio.stopLocal(device, deviceType)
+end
+
+function Audio.setStation(player, device, deviceType, station)
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        if not vehicleId then return false, "No hay dispositivo" end
+        ArgenRadio.Net.send("station", { vehicle = vehicleId, station = station })
+        return true
+    end
+    return Audio.setStationLocal(player, device, deviceType, station)
+end
+
+function Audio.changeTrack(player, device, deviceType, delta)
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        if not vehicleId then return false, "No hay dispositivo" end
+        ArgenRadio.Net.send("track", { vehicle = vehicleId, delta = delta })
+        return true
+    end
+    return Audio.changeTrackLocal(player, device, deviceType, delta)
+end
+
+function Audio.setVolume(device, deviceType, volume)
+    local ok = Audio.setVolumeLocal(device, deviceType, volume)
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        if vehicleId then
+            ArgenRadio.Net.send("volume", { vehicle = vehicleId, volume = ok })
+        end
+    end
+    return ok
+end
+
+function Audio.setMuted(device, deviceType, muted)
+    local ok = Audio.setMutedLocal(device, deviceType, muted)
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        if vehicleId then
+            ArgenRadio.Net.send("mute", { vehicle = vehicleId, muted = ok })
+        end
+    end
+    return ok
 end
 
 -- Mantiene las sesiones vivas, actualiza la posicion de las portatiles y
@@ -366,11 +529,27 @@ function Audio.update()
         end
 
         if not alive then
-            Audio.stop(session.device, session.deviceType)
+            Audio.stopLocal(session.device, session.deviceType)
         elseif session.emitter and session.soundID then
             if not session.emitter:isPlaying(session.soundID) then
                 if now - (session.startMs or 0) > ADVANCE_GRACE_MS then
-                    table.insert(advance, session)
+                    if shouldSync(session.deviceType) then
+                        -- Multijugador: pedir el avance una sola vez. El
+                        -- servidor acepta al primero que trae la revision.
+                        if not session.advanceSent then
+                            session.advanceSent = true
+                            local vehicleId = vehicleIdOf(session.device)
+                            local state = Audio.getState(session.device, session.deviceType)
+                            if vehicleId then
+                                ArgenRadio.Net.send("advance", {
+                                    vehicle = vehicleId,
+                                    revision = state.revision or 0,
+                                })
+                            end
+                        end
+                    else
+                        table.insert(advance, session)
+                    end
                 end
             end
         end
