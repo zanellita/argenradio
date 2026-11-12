@@ -1,74 +1,48 @@
 -- ArgenRadio - definiciones compartidas (cliente y servidor)
--- Etapa 4: playlist por emisora, con pistas de prueba por genero.
+-- Biblioteca genero -> artista -> canciones. El archivo de datos lo genera
+-- Herramientas/generar-biblioteca.ps1 (ArgenRadio_Library.lua).
 
 ArgenRadio = ArgenRadio or {}
 
-ArgenRadio.VERSION = "0.5.0"
+ArgenRadio.VERSION = "0.6.0"
 
--- Cada emisora tiene una carpeta propia dentro de media/sound/argenradio/
--- y una lista de temas. El campo sound coincide con el sound script de
--- media/scripts/argenradio_sounds.txt.
--- freq es estetico; la marca del dial se ubica segun la frecuencia.
-ArgenRadio.STATIONS = {
-    {
-        id = "rocknacional", nombre = "Rock Nacional", freq = "101.5",
-        tracks = {
-            { sound = "ArgenRadio_RockNacional_1", titulo = "Prueba 1" },
-            { sound = "ArgenRadio_RockNacional_2", titulo = "Prueba 2" },
-            { sound = "ArgenRadio_RockNacional_3", titulo = "Prueba 3" },
+-- Modos de reproduccion por ambito. "random" elige al azar (tema inicial,
+-- siguiente y anterior); "list" recorre la lista en orden con vuelta.
+ArgenRadio.MODE_RANDOM = "random"
+ArgenRadio.MODE_LIST = "list"
+-- Historial del ambito actual: se descarta al cambiar de emisora, artista
+-- o modo, para no guardar el recorrido de todo lo escuchado.
+ArgenRadio.HISTORY_MAX = 20
+
+-- Si falta el archivo generado, dejamos las emisoras sin artistas para que
+-- la ventana no se rompa; el generador crea ArgenRadio_Library.lua.
+if not ArgenRadio.Library then
+    ArgenRadio.Library = {
+        stations = {
+            { id = "rocknacional", nombre = "Rock Nacional", freq = "101.5", artists = {} },
+            { id = "cumbia", nombre = "Cumbia", freq = "92.7", artists = {} },
+            { id = "cuarteto", nombre = "Cuarteto", freq = "88.9", artists = {} },
+            { id = "lentos", nombre = "Lentos", freq = "95.3", artists = {} },
+            { id = "folklore", nombre = "Folklore", freq = "104.1", artists = {} },
+            { id = "rkt", nombre = "RKT", freq = "107.9", artists = {} },
         },
-    },
-    {
-        id = "cumbia", nombre = "Cumbia", freq = "92.7",
-        tracks = {
-            { sound = "ArgenRadio_Cumbia_1", titulo = "Prueba 1" },
-            { sound = "ArgenRadio_Cumbia_2", titulo = "Prueba 2" },
-            { sound = "ArgenRadio_Cumbia_3", titulo = "Prueba 3" },
-        },
-    },
-    {
-        id = "cuarteto", nombre = "Cuarteto", freq = "88.9",
-        tracks = {
-            { sound = "ArgenRadio_Cuarteto_1", titulo = "Prueba 1" },
-            { sound = "ArgenRadio_Cuarteto_2", titulo = "Prueba 2" },
-            { sound = "ArgenRadio_Cuarteto_3", titulo = "Prueba 3" },
-        },
-    },
-    {
-        id = "lentos", nombre = "Lentos", freq = "95.3",
-        tracks = {
-            { sound = "ArgenRadio_Lentos_1", titulo = "Prueba 1" },
-            { sound = "ArgenRadio_Lentos_2", titulo = "Prueba 2" },
-            { sound = "ArgenRadio_Lentos_3", titulo = "Prueba 3" },
-        },
-    },
-    {
-        id = "folklore", nombre = "Folklore", freq = "104.1",
-        tracks = {
-            { sound = "ArgenRadio_Folklore_1", titulo = "Prueba 1" },
-            { sound = "ArgenRadio_Folklore_2", titulo = "Prueba 2" },
-            { sound = "ArgenRadio_Folklore_3", titulo = "Prueba 3" },
-        },
-    },
-    {
-        id = "rkt", nombre = "RKT", freq = "107.9",
-        tracks = {
-            { sound = "ArgenRadio_RKT_1", titulo = "Prueba 1" },
-            { sound = "ArgenRadio_RKT_2", titulo = "Prueba 2" },
-            { sound = "ArgenRadio_RKT_3", titulo = "Prueba 3" },
-        },
-    },
-}
+    }
+end
+
+function ArgenRadio.getStations()
+    return ArgenRadio.Library and ArgenRadio.Library.stations or {}
+end
 
 -- Devuelve la emisora y el indice normalizado (1..N).
 function ArgenRadio.getStation(index)
-    local n = #ArgenRadio.STATIONS
+    local stations = ArgenRadio.getStations()
+    local n = #stations
     if n == 0 then return nil, 1 end
     index = tonumber(index) or 1
     index = math.floor(index)
     if index < 1 then index = 1 end
     if index > n then index = ((index - 1) % n) + 1 end
-    return ArgenRadio.STATIONS[index], index
+    return stations[index], index
 end
 
 function ArgenRadio.getStationName(index)
@@ -76,11 +50,68 @@ function ArgenRadio.getStationName(index)
     return station and station.nombre or "ArgenRadio"
 end
 
--- Lista de temas de una emisora (puede estar vacia).
-function ArgenRadio.getStationTracks(index)
+function ArgenRadio.getStationArtists(index)
     local station = ArgenRadio.getStation(index)
-    if not station or not station.tracks then return {} end
-    return station.tracks
+    return station and station.artists or {}
+end
+
+-- Devuelve el artista por id, o nil si no existe en la emisora.
+function ArgenRadio.getArtist(stationIndex, artistId)
+    if not artistId or artistId == "" then return nil end
+    local artists = ArgenRadio.getStationArtists(stationIndex)
+    for i = 1, #artists do
+        if artists[i].id == artistId then return artists[i], i end
+    end
+    return nil
+end
+
+function ArgenRadio.isValidArtist(stationIndex, artistId)
+    if not artistId or artistId == "" then return true end
+    return ArgenRadio.getArtist(stationIndex, artistId) ~= nil
+end
+
+-- Nombre visible del ambito actual: el artista o "Todo el genero".
+function ArgenRadio.getScopeName(stationIndex, artistId)
+    local artist = ArgenRadio.getArtist(stationIndex, artistId)
+    return artist and artist.nombre or "Todo el genero"
+end
+
+-- Lista plana de temas de una emisora (todos los artistas, en orden).
+-- El indice plano es el que viaja por la red y el que usa el dial.
+function ArgenRadio.getStationTracks(stationIndex)
+    local station = ArgenRadio.getStation(stationIndex)
+    if not station then return {} end
+    if station._tracks then return station._tracks end
+
+    local tracks = {}
+    local artists = station.artists or {}
+    for i = 1, #artists do
+        local artist = artists[i]
+        local list = artist.tracks or {}
+        for j = 1, #list do
+            local track = list[j]
+            track.artistId = artist.id
+            if not track.artista then track.artista = artist.nombre end
+            track.index = #tracks + 1
+            tracks[#tracks + 1] = track
+        end
+    end
+    station._tracks = tracks
+    return tracks
+end
+
+-- Temas del ambito actual: todo el genero o un artista puntual.
+function ArgenRadio.getScopeTracks(stationIndex, artistId)
+    local all = ArgenRadio.getStationTracks(stationIndex)
+    if not artistId or artistId == "" then return all end
+
+    local scope = {}
+    for i = 1, #all do
+        if all[i].artistId == artistId then
+            scope[#scope + 1] = all[i]
+        end
+    end
+    return scope
 end
 
 -- Devuelve el tema y el indice normalizado (1..N).
@@ -102,18 +133,24 @@ end
 
 function ArgenRadio.getTrackTitle(stationIndex, trackIndex)
     local track = ArgenRadio.getTrack(stationIndex, trackIndex)
-    return track and track.titulo or "--"
+    if not track then return "--" end
+    if track.artista and track.artista ~= "" then
+        return track.artista .. " - " .. (track.titulo or "--")
+    end
+    return track.titulo or "--"
 end
 
--- Compatibilidad con la etapa 3: primer tema de la emisora.
-function ArgenRadio.getStationSound(index)
-    return ArgenRadio.getTrackSound(index, 1)
+-- Modo del ambito activo (artista si hay uno elegido; si no, genero).
+function ArgenRadio.getActiveMode(state)
+    if not state then return ArgenRadio.MODE_RANDOM end
+    if state.artist and state.artist ~= "" then
+        return state.artistMode or ArgenRadio.MODE_RANDOM
+    end
+    return state.genreMode or ArgenRadio.MODE_RANDOM
 end
 
-local totalTracks = 0
-for i = 1, #ArgenRadio.STATIONS do
-    totalTracks = totalTracks + #ArgenRadio.STATIONS[i].tracks
+function ArgenRadio.normalizeMode(mode, fallback)
+    if mode == ArgenRadio.MODE_LIST then return ArgenRadio.MODE_LIST end
+    if mode == ArgenRadio.MODE_RANDOM then return ArgenRadio.MODE_RANDOM end
+    return fallback or ArgenRadio.MODE_RANDOM
 end
-
-print("[ArgenRadio] v" .. ArgenRadio.VERSION .. " cargado ("
-    .. #ArgenRadio.STATIONS .. " emisoras, " .. totalTracks .. " temas)")

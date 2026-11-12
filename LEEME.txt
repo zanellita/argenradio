@@ -1,4 +1,4 @@
-ArgenRadio - Project Zomboid Build 42
+ArgenRadio - Project Zomboid Build 42 (version 0.6.0)
 
 Instalacion (host y amigo):
 1. Copiar/descomprimir la carpeta ArgenRadio dentro de:
@@ -7,34 +7,69 @@ Instalacion (host y amigo):
 3. En el servidor local del host, activar el mismo mod.
 4. Ambos deben usar la misma build (42.21.0) y los mismos archivos de audio.
 
+Importante: en Build 42 el mod.info y la carpeta media van DENTRO de la
+carpeta 42\, no en la raiz del mod.
+
 Estructura (Build 42):
   ArgenRadio\42\mod.info
   ArgenRadio\42\poster.png
   ArgenRadio\42\media\lua\shared\ArgenRadio\ArgenRadio_Defs.lua
+  ArgenRadio\42\media\lua\shared\ArgenRadio\ArgenRadio_Library.lua
+  ArgenRadio\42\media\lua\shared\ArgenRadio\ArgenRadio_Playlist.lua
   ArgenRadio\42\media\lua\client\ArgenRadio\ArgenRadio_Audio.lua
   ArgenRadio\42\media\lua\client\ArgenRadio\ArgenRadio_Net.lua
   ArgenRadio\42\media\lua\client\ArgenRadio\ArgenRadio_UI.lua
   ArgenRadio\42\media\lua\server\ArgenRadio\ArgenRadio_Server.lua
   ArgenRadio\42\media\scripts\argenradio_sounds.txt
-  ArgenRadio\42\media\sound\argenradio\...
-
-Importante: en Build 42 el mod.info y la carpeta media van DENTRO de la
-carpeta 42\, no en la raiz del mod.
+  ArgenRadio\42\media\sound\argenradio\<genero>\<artista>\*.ogg
+  ArgenRadio\Herramientas\generar-biblioteca.ps1
+  ArgenRadio\generar-biblioteca.cmd
 
 Musica:
-Cada genero tiene su carpeta dentro de:
-  42\media\sound\argenradio\<genero>\
+Cada genero tiene su carpeta y, dentro, una carpeta por artista:
+  42\media\sound\argenradio\<genero>\<artista>\*.ogg
 Generos: rocknacional, cumbia, cuarteto, lentos, folklore, rkt
+Ejemplo: 42\media\sound\argenradio\rocknacional\prueba-a\prueba_1.ogg
 
-Por ahora hay 3 pistas de prueba por genero (track_01.ogg, track_02.ogg,
-track_03.ogg). Son tonos cortos para probar el cambio de tema; se pueden
-reemplazar por musica real manteniendo el mismo nombre de archivo.
+Los .ogg sueltos en la raiz del genero entran como artista "Sueltos".
+El nombre de la carpeta es el nombre del artista y el nombre del archivo
+es el titulo de la cancion (se quitan prefijos tipo "01 - "). Usar
+nombres sin espacios raros (mejor con _).
 
-La radio elige un tema al azar al empezar. Los botones "Tema anterior" y
-"Tema siguiente" cambian de cancion dentro de la misma emisora, y cuando
-termina un tema pasa solo al siguiente. Para cambiar de emisora, usar la
-lista "Generos" y hacer clic en el genero.
+Por ahora hay 18 pistas de prueba (tonos cortos), repartidas en dos
+artistas por genero (prueba-a y prueba-b).
+
+Biblioteca generada:
+ArgenRadio_Library.lua y argenradio_sounds.txt se generan solos. Cada vez
+que se agregan, quitan o renombran .ogg:
+1. Ejecutar generar-biblioteca.cmd (doble clic) o:
+   powershell -NoProfile -ExecutionPolicy Bypass -File "Herramientas\generar-biblioteca.ps1"
+2. Copiar el mod completo a las dos maquinas.
+No editar ArgenRadio_Library.lua ni argenradio_sounds.txt a mano.
+
+Uso en el juego:
+- La radio de auto, de casa y portatil usa el panel ArgenRadio.
+- El modulo plegable "Generos" tiene tres listas: Generos, Artistas y Canciones.
+- "Todo el genero" reproduce el genero completo; al elegir un artista se
+  limita la reproduccion a ese artista.
+- Un clic en una cancion reproduce ese tema puntual sin cambiar el ambito.
+- Los botones "Genero: Aleatorio/En fila" y "Artista: Aleatorio/En fila"
+  son independientes y tambien afectan a "Tema siguiente".
+- En aleatorio, "Tema anterior" vuelve por el historial real del ambito.
+- "Tema anterior" y "Tema siguiente" NO cambian de emisora: para eso estan
+  las listas de generos y artistas.
+- Al terminar un tema pasa solo al siguiente (segun el modo).
 
 Multijugador (etapa 5):
-Host y amigo comparten la radio del AUTO: emisora, tema y volumen.
+Host y amigo comparten la radio del AUTO: emisora, artista, tema, modos,
+volumen y mute. El servidor es la autoridad y guarda el estado en el
+vehiculo; cada cliente reproduce el audio localmente.
 Las radios de casa y portatiles todavia no se comparten entre jugadores.
+
+Pendiente:
+- La bateria todavia no se gasta.
+- Los zombis todavia no se sienten atraidos por la musica.
+- Las pistas son tonos de prueba, no musica real.
+
+Para musica real: convertir a .ogg (Vorbis) y copiar cada tema en la
+carpeta del artista que corresponda; despues regenerar la biblioteca.

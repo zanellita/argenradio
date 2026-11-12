@@ -3,8 +3,12 @@
 -- vehicle:getModData().argenRadio y lo retransmite por comandos propios.
 -- Cada cliente recrea su sesion local a partir de ese estado.
 --
--- Alcance de la etapa 5: solo radio de vehiculo. Las radios de casa y las
--- portatiles siguen con el comportamiento local de la etapa 4.
+-- La biblioteca es genero -> artista -> canciones. El servidor decide el
+-- tema segun el ambito (todo el genero o un artista), el modo aleatorio/fila
+-- y el historial del ambito actual.
+--
+-- Alcance: solo radio de vehiculo. Las radios de casa y las portatiles
+-- siguen con el comportamiento local.
 
 if not isServer() then return end
 
@@ -21,6 +25,14 @@ local SYNC_INTERVAL_MS = 5000
 
 local lastSyncMs = 0
 
+-- ZombRand(n) devuelve 0..n-1. El Playlist espera un rng que devuelva 1..n.
+local function randTrack(max)
+    local value = math.floor(ZombRand(max) or 0) + 1
+    if value < 1 then value = 1 end
+    if value > max then value = max end
+    return value
+end
+
 local function clampVolume(value)
     value = tonumber(value) or DEFAULT_VOLUME
     if value < 0 then value = 0 end
@@ -28,48 +40,61 @@ local function clampVolume(value)
     return value
 end
 
+local function newState()
+    return {
+        on = false,
+        station = 1,
+        track = 1,
+        artist = "",
+        genreMode = ArgenRadio.MODE_RANDOM,
+        artistMode = ArgenRadio.MODE_RANDOM,
+        history = {},
+        volume = DEFAULT_VOLUME,
+        muted = false,
+        revision = 0,
+    }
+end
+
+local function trackInScope(stationIndex, artist, trackIndex)
+    local scope = ArgenRadio.getScopeTracks(stationIndex, artist)
+    for i = 1, #scope do
+        if scope[i].index == trackIndex then return true end
+    end
+    return false
+end
+
 local function getState(vehicle)
     local modData = vehicle:getModData()
     local state = modData.argenRadio
     if type(state) ~= "table" then
-        state = {
-            on = false,
-            station = 1,
-            track = 1,
-            volume = DEFAULT_VOLUME,
-            muted = false,
-            revision = 0,
-        }
+        state = newState()
         modData.argenRadio = state
     end
 
     local _, stationIndex = ArgenRadio.getStation(state.station)
-    local _, trackIndex = ArgenRadio.getTrack(stationIndex, state.track)
-    state.on = state.on == true
     state.station = stationIndex
+    state.artist = tostring(state.artist or "")
+    if not ArgenRadio.isValidArtist(stationIndex, state.artist) then
+        state.artist = ""
+    end
+    state.genreMode = ArgenRadio.normalizeMode(state.genreMode, ArgenRadio.MODE_RANDOM)
+    state.artistMode = ArgenRadio.normalizeMode(state.artistMode, ArgenRadio.MODE_RANDOM)
+    if type(state.history) ~= "table" then state.history = {} end
+
+    local _, trackIndex = ArgenRadio.getTrack(stationIndex, state.track)
+    -- Si la biblioteca cambio y el tema quedo fuera del artista elegido,
+    -- arrancamos desde el primer tema valido del ambito.
+    local scope = ArgenRadio.getScopeTracks(stationIndex, state.artist)
+    if #scope > 0 and not trackInScope(stationIndex, state.artist, trackIndex) then
+        trackIndex = scope[1].index
+    end
     state.track = trackIndex
+
+    state.on = state.on == true
     state.volume = clampVolume(state.volume)
     state.muted = state.muted == true
     state.revision = tonumber(state.revision) or 0
     return state
-end
-
--- Elige un tema valido; si no viene uno, sortea otro distinto del actual.
-local function pickTrack(station, track, current)
-    local tracks = ArgenRadio.getStationTracks(station)
-    local count = #tracks
-    if count == 0 then return 1 end
-
-    if track then
-        local _, index = ArgenRadio.getTrack(station, track)
-        return index
-    end
-
-    local index = math.floor(ZombRand(count) or 0) + 1
-    if count > 1 and index == current then
-        index = (index % count) + 1
-    end
-    return index
 end
 
 local function makePayload(vehicle, state)
@@ -78,6 +103,9 @@ local function makePayload(vehicle, state)
         on = state.on,
         station = state.station,
         track = state.track,
+        artist = state.artist,
+        genreMode = state.genreMode,
+        artistMode = state.artistMode,
         volume = state.volume,
         muted = state.muted,
         revision = state.revision,
@@ -141,8 +169,9 @@ local function onClientCommand(module, command, player, args)
         if not state.on or not revision or revision ~= state.revision then
             return
         end
-        local _, trackIndex = ArgenRadio.getTrack(state.station, state.track + 1)
-        state.track = trackIndex
+        local track = ArgenRadio.Playlist.step(state, 1, randTrack)
+        if not track then return end
+        state.track = track
         state.revision = state.revision + 1
         broadcast(vehicle, state)
         return
@@ -155,8 +184,32 @@ local function onClientCommand(module, command, player, args)
 
     if command == "play" then
         local _, stationIndex = ArgenRadio.getStation(args.station or state.station)
-        state.station = stationIndex
-        state.track = pickTrack(state.station, args.track, state.track)
+        if stationIndex ~= state.station then
+            state.station = stationIndex
+            state.artist = ""
+            state.history = {}
+        end
+
+        if args.artist ~= nil then
+            local artist = tostring(args.artist)
+            if ArgenRadio.isValidArtist(state.station, artist) then
+                if artist ~= state.artist then state.history = {} end
+                state.artist = artist
+            end
+        end
+
+        local requested = tonumber(args.track)
+        if requested then
+            local _, trackIndex = ArgenRadio.getTrack(state.station, requested)
+            if trackInScope(state.station, state.artist, trackIndex) then
+                state.track = trackIndex
+            else
+                state.track = ArgenRadio.Playlist.pickStart(state, randTrack) or state.track
+            end
+        elseif not trackInScope(state.station, state.artist, state.track) then
+            state.track = ArgenRadio.Playlist.pickStart(state, randTrack) or state.track
+        end
+
         state.volume = clampVolume(args.volume or state.volume)
         state.on = true
         state.revision = state.revision + 1
@@ -171,18 +224,58 @@ local function onClientCommand(module, command, player, args)
 
     elseif command == "station" then
         local _, stationIndex = ArgenRadio.getStation(args.station or state.station)
-        state.station = stationIndex
-        state.track = pickTrack(state.station, nil, state.track)
-        state.revision = state.revision + 1
-        changed = true
+        if stationIndex ~= state.station then
+            state.station = stationIndex
+            state.artist = ""
+            state.track = ArgenRadio.Playlist.pickStart(state, randTrack) or state.track
+            state.revision = state.revision + 1
+            changed = true
+        end
+
+    elseif command == "scope" then
+        local artist = tostring(args.artist or "")
+        if not ArgenRadio.isValidArtist(state.station, artist) then artist = "" end
+        if artist ~= state.artist then
+            state.artist = artist
+            state.track = ArgenRadio.Playlist.pickStart(state, randTrack) or state.track
+            state.revision = state.revision + 1
+            changed = true
+        end
+
+    elseif command == "mode" then
+        local mode = ArgenRadio.normalizeMode(args.mode, ArgenRadio.MODE_RANDOM)
+        local isArtist = (args.scope == "artist")
+        local current = isArtist and state.artistMode or state.genreMode
+        if current ~= mode then
+            if isArtist then
+                state.artistMode = mode
+            else
+                state.genreMode = mode
+            end
+            state.history = {}
+            state.revision = state.revision + 1
+            changed = true
+        end
+
+    elseif command == "select" then
+        local requested = tonumber(args.track)
+        if requested then
+            local _, trackIndex = ArgenRadio.getTrack(state.station, requested)
+            state.track = trackIndex
+            state.history = {}
+            state.revision = state.revision + 1
+            changed = true
+        end
 
     elseif command == "track" then
         local delta = tonumber(args.delta) or 1
         if delta < 0 then delta = -1 else delta = 1 end
-        local _, trackIndex = ArgenRadio.getTrack(state.station, state.track + delta)
-        state.track = trackIndex
-        state.revision = state.revision + 1
-        changed = true
+        local track = ArgenRadio.Playlist.step(state, delta, randTrack)
+        if track then
+            state.track = track
+            state.revision = state.revision + 1
+            changed = true
+        end
 
     elseif command == "volume" then
         local volume = clampVolume(args.volume)

@@ -1,16 +1,16 @@
 -- ArgenRadio - motor de audio del cliente
--- Reproduce la playlist de la emisora elegida en el emitter del dispositivo:
+-- Reproduce la emisora elegida en el emitter del dispositivo:
 --   * vehiculo  -> emitter propio del vehiculo (sigue sonando al bajarse)
 --   * casa      -> emitter libre posicionado en el objeto
 --   * portatil  -> emitter libre que sigue al jugador que la lleva
 --
--- Etapa 4: cada emisora tiene varios temas. El primero se elige al azar y
--- al terminar uno arranca el siguiente solo. Los botones Tema anterior /
--- Tema siguiente recorren la lista en orden; la emisora se cambia aparte.
---
 -- Etapa 5: la radio del vehiculo pasa por el servidor (ver ArgenRadio_Net.lua
 -- y ArgenRadio_Server.lua). Las funciones *Local son el motor de siempre;
 -- la API publica decide entre local y multijugador.
+--
+-- Biblioteca (v0.6): genero -> artista -> canciones. El ambito puede ser
+-- todo el genero o un artista, y cada ambito tiene su modo aleatorio/fila.
+-- El historial de "Tema anterior" solo vive mientras dura el ambito actual.
 
 ArgenRadio = ArgenRadio or {}
 ArgenRadio.Audio = ArgenRadio.Audio or {}
@@ -21,14 +21,13 @@ local DEFAULT_VOLUME = 0.7
 -- Margen para no confundir "todavia no arranco" con "ya termino".
 local ADVANCE_GRACE_MS = 1500
 
--- Estado por dispositivo (emisora, tema, encendido, volumen).
+-- Estado por dispositivo (emisora, artista, modo, tema, encendido, volumen).
 local states = {}
 -- Sesiones de audio activas por dispositivo.
 local sessions = {}
 
 -- Generador pseudoaleatorio propio: el Lua de Project Zomboid (Kahlua)
--- no garantiza math.random ni math.randomseed. Con esto el tema inicial
--- cambia en cada partida sin depender de esas funciones.
+-- no garantiza math.random ni math.randomseed.
 local rngState = math.floor((getTimestampMs and getTimestampMs() or os.time()) % 2147483646) + 1
 
 local function randInt(max)
@@ -46,25 +45,20 @@ local function clampVolume(value)
     return value
 end
 
-local function normalizeStation(index)
-    local n = #ArgenRadio.STATIONS
-    if n == 0 then return 1 end
-    index = tonumber(index) or 1
-    index = math.floor(index)
-    if index < 1 then index = 1 end
-    if index > n then index = ((index - 1) % n) + 1 end
-    return index
-end
-
--- Devuelve otro tema al azar, evitando repetir el actual.
-local function pickRandomTrack(state, count)
-    if count <= 1 then return 1 end
-    local current = state and state.track
-    local index = randInt(count)
-    if index == current then
-        index = (index % count) + 1
-    end
-    return index
+local function newState()
+    return {
+        station = 1,
+        track = 1,
+        trackChosen = false,
+        playing = false,
+        volume = DEFAULT_VOLUME,
+        muted = false,
+        artist = "",
+        genreMode = ArgenRadio.MODE_RANDOM,
+        artistMode = ArgenRadio.MODE_RANDOM,
+        history = {},
+        revision = 0,
+    }
 end
 
 local function deviceKey(device, deviceType)
@@ -139,19 +133,11 @@ end
 
 function Audio.getState(device, deviceType)
     local key = deviceKey(device, deviceType)
-    if not key then
-        return {
-            station = 1, track = 1, trackChosen = false, playing = false,
-            volume = DEFAULT_VOLUME, muted = false,
-        }
-    end
+    if not key then return newState() end
 
     local state = states[key]
     if not state then
-        state = {
-            station = 1, track = 1, trackChosen = false, playing = false,
-            volume = DEFAULT_VOLUME, muted = false,
-        }
+        state = newState()
         states[key] = state
     end
     return state
@@ -181,7 +167,7 @@ function Audio.stopLocal(device, deviceType)
 end
 
 -- Devuelve true si arranco, o false + motivo si no.
--- track es opcional: si no viene, se elige uno al azar.
+-- track es opcional: si no viene, se elige segun el ambito y el modo.
 function Audio.playLocal(player, device, deviceType, station, volume, track)
     if not device then
         return false, "No hay dispositivo"
@@ -193,9 +179,16 @@ function Audio.playLocal(player, device, deviceType, station, volume, track)
     end
 
     local state = Audio.getState(device, deviceType)
-    station = normalizeStation(station or state.station)
+    local _, stationIndex = ArgenRadio.getStation(station or state.station)
 
-    local tracks = ArgenRadio.getStationTracks(station)
+    -- Cambiar de emisora descarta el artista y el historial del anterior.
+    if stationIndex ~= state.station then
+        state.station = stationIndex
+        state.artist = ""
+        state.history = {}
+    end
+
+    local tracks = ArgenRadio.getStationTracks(stationIndex)
     local count = #tracks
     if count == 0 then
         state.playing = false
@@ -210,13 +203,17 @@ function Audio.playLocal(player, device, deviceType, station, volume, track)
         if track < 1 then track = 1 end
         if track > count then track = ((track - 1) % count) + 1 end
     else
-        track = pickRandomTrack(state, count)
+        track = ArgenRadio.Playlist.pickStart(state, randInt)
+    end
+    if not track then
+        state.playing = false
+        return false, "La emisora no tiene temas"
     end
 
     local soundName = tracks[track] and tracks[track].sound
     if not soundName then
         state.playing = false
-        return false, "Falta el sound script de la emisora " .. tostring(station)
+        return false, "Falta el sound script de la emisora " .. tostring(stationIndex)
     end
 
     -- Cortar lo que hubiera sonando en este mismo dispositivo.
@@ -252,59 +249,116 @@ function Audio.playLocal(player, device, deviceType, station, volume, track)
         soundID = soundID,
         soundName = soundName,
         volume = actualVolume,
-        station = station,
+        station = stationIndex,
         track = track,
         startMs = getTimestampMs and getTimestampMs() or 0,
     }
 
     state.playing = true
-    state.station = station
+    state.station = stationIndex
     state.track = track
     state.trackChosen = true
     state.volume = volume
     print("[ArgenRadio] Reproduciendo " .. tostring(soundName)
-        .. " (emisora " .. tostring(station) .. ", tema "
+        .. " (emisora " .. tostring(stationIndex) .. ", tema "
         .. tostring(track) .. "/" .. tostring(count) .. ")")
     return true
 end
 
--- Cambia de emisora. Si estaba sonando, reinicia con un tema al azar.
+-- Cambia de emisora. Si estaba sonando, arranca con un tema del nuevo
+-- genero segun el modo del genero (aleatorio o fila).
 function Audio.setStationLocal(player, device, deviceType, station)
     if not device then return false, "No hay dispositivo" end
 
     local state = Audio.getState(device, deviceType)
-    local count = #ArgenRadio.STATIONS
-    if count == 0 then return false, "No hay emisoras" end
+    local _, stationIndex = ArgenRadio.getStation(station or state.station)
+    if stationIndex == state.station and state.trackChosen then
+        return true
+    end
 
-    station = normalizeStation(station or state.station)
-    state.station = station
+    state.station = stationIndex
+    state.artist = ""
+    state.track = ArgenRadio.Playlist.pickStart(state, randInt)
+    state.trackChosen = state.track ~= nil
 
-    local tracks = ArgenRadio.getStationTracks(station)
-    state.track = pickRandomTrack(state, #tracks)
-    state.trackChosen = true
-
-    if state.playing then
+    if state.playing and state.track then
         return Audio.playLocal(
-            player, device, deviceType, station, state.volume, state.track)
+            player, device, deviceType, stationIndex, state.volume, state.track)
     end
     return true
 end
 
--- Cambia de tema dentro de la misma emisora, en orden y dando la vuelta.
+-- Elige "Todo el genero" (artistId = "") o un artista puntual. Si estaba
+-- sonando, arranca un tema del nuevo ambito; si no, solo deja elegido.
+function Audio.setScopeLocal(player, device, deviceType, artistId)
+    if not device then return false, "No hay dispositivo" end
+
+    local state = Audio.getState(device, deviceType)
+    artistId = tostring(artistId or "")
+    if not ArgenRadio.isValidArtist(state.station, artistId) then
+        artistId = ""
+    end
+    if state.artist == artistId then return true end
+
+    state.artist = artistId
+    state.track = ArgenRadio.Playlist.pickStart(state, randInt)
+    state.trackChosen = state.track ~= nil
+
+    if state.playing and state.track then
+        return Audio.playLocal(
+            player, device, deviceType, state.station, state.volume, state.track)
+    end
+    return true
+end
+
+-- Cambia el modo de un ambito ("genre" o "artist") sin cortar el tema.
+function Audio.setModeLocal(device, deviceType, scope, mode)
+    local state = Audio.getState(device, deviceType)
+    mode = ArgenRadio.normalizeMode(mode, ArgenRadio.MODE_RANDOM)
+
+    if scope == "artist" then
+        if state.artistMode ~= mode then
+            state.artistMode = mode
+            state.history = {}
+        end
+    else
+        if state.genreMode ~= mode then
+            state.genreMode = mode
+            state.history = {}
+        end
+    end
+    return mode
+end
+
+-- Reproduce un tema puntual de la emisora (clic en la lista de canciones).
+function Audio.selectTrackLocal(player, device, deviceType, track)
+    if not device then return false, "No hay dispositivo" end
+
+    local state = Audio.getState(device, deviceType)
+    local tracks = ArgenRadio.getStationTracks(state.station)
+    if #tracks == 0 then return false, "La emisora no tiene temas" end
+
+    local _, trackIndex = ArgenRadio.getTrack(state.station, track)
+    state.track = trackIndex
+    state.trackChosen = true
+    state.history = {}
+
+    if state.playing then
+        return Audio.playLocal(
+            player, device, deviceType, state.station, state.volume, trackIndex)
+    end
+    return true
+end
+
+-- Cambia de tema dentro del ambito actual, respetando el modo.
 -- delta = 1 (siguiente) o -1 (anterior). Si estaba sonando, lo reproduce.
 function Audio.changeTrackLocal(player, device, deviceType, delta)
     if not device then return false, "No hay dispositivo" end
 
     local state = Audio.getState(device, deviceType)
-    local tracks = ArgenRadio.getStationTracks(state.station)
-    local count = #tracks
-    if count == 0 then return false, "La emisora no tiene temas" end
+    local track = ArgenRadio.Playlist.step(state, delta, randInt)
+    if not track then return false, "La emisora no tiene temas" end
 
-    delta = tonumber(delta) or 1
-    if delta < 0 then delta = -1 else delta = 1 end
-
-    local current = state.track or 1
-    local track = ((current - 1 + delta) % count) + 1
     state.track = track
     state.trackChosen = true
 
@@ -315,7 +369,7 @@ function Audio.changeTrackLocal(player, device, deviceType, delta)
     return true
 end
 
--- Atajos: el avance automatico y el boton "Tema siguiente" van al siguiente.
+-- Atajos: el avance automatico y el boton "Tema siguiente".
 function Audio.nextTrack(player, device, deviceType)
     return Audio.changeTrack(player, device, deviceType, 1)
 end
@@ -384,16 +438,24 @@ function Audio.applyRemoteState(vehicleId, data)
 
     local state = Audio.getState(part, "VehiclePart")
     local _, stationIndex = ArgenRadio.getStation(data.station or state.station)
+    local artist = tostring(data.artist or "")
+    if not ArgenRadio.isValidArtist(stationIndex, artist) then
+        artist = ""
+    end
     local _, trackIndex = ArgenRadio.getTrack(stationIndex, data.track or state.track)
     local volume = clampVolume(data.volume or state.volume)
     local muted = data.muted == true
     local on = data.on == true
 
     state.station = stationIndex
+    state.artist = artist
     state.track = trackIndex
     state.trackChosen = true
     state.volume = volume
     state.muted = muted
+    state.genreMode = ArgenRadio.normalizeMode(data.genreMode, state.genreMode)
+    state.artistMode = ArgenRadio.normalizeMode(data.artistMode, state.artistMode)
+    state.history = {}
     state.revision = tonumber(data.revision) or state.revision or 0
 
     local key = deviceKey(part, "VehiclePart")
@@ -410,12 +472,22 @@ function Audio.applyRemoteState(vehicleId, data)
     local soundName = ArgenRadio.getTrackSound(stationIndex, trackIndex)
     if not soundName then return false end
 
-    -- Mismo tema: solo cambia volumen o mute, no reiniciar el audio.
+    -- Mismo tema: solo cambia volumen, mute, ambito o modo; no reiniciar.
+    -- Excepcion: si el tema ya termino y el servidor lo volvio a elegir
+    -- (ambito de un solo tema), hay que reiniciar el clip.
     if session and session.soundName == soundName then
         local actualVolume = muted and 0 or volume
         session.volume = actualVolume
         if session.emitter and session.soundID then
             session.emitter:setVolume(session.soundID, actualVolume)
+            if not session.emitter:isPlaying(session.soundID) then
+                local now = getTimestampMs and getTimestampMs() or 0
+                if now - (session.startMs or 0) > ADVANCE_GRACE_MS then
+                    Audio.stopLocal(part, "VehiclePart")
+                    return Audio.playLocal(
+                        nil, part, "VehiclePart", stationIndex, volume, trackIndex)
+                end
+            end
         end
         state.playing = true
         return true
@@ -436,11 +508,13 @@ function Audio.play(player, device, deviceType, station, volume, track)
     if shouldSync(deviceType) then
         local vehicleId = vehicleIdOf(device)
         if not vehicleId then return false, "No hay dispositivo" end
+        local state = Audio.getState(device, deviceType)
         ArgenRadio.Net.send("play", {
             vehicle = vehicleId,
             station = station,
             track = track,
             volume = volume,
+            artist = state.artist or "",
         })
         return true
     end
@@ -467,6 +541,46 @@ function Audio.setStation(player, device, deviceType, station)
         return true
     end
     return Audio.setStationLocal(player, device, deviceType, station)
+end
+
+function Audio.setScope(player, device, deviceType, artistId)
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        if not vehicleId then return false, "No hay dispositivo" end
+        ArgenRadio.Net.send("scope", {
+            vehicle = vehicleId,
+            artist = tostring(artistId or ""),
+        })
+        return true
+    end
+    return Audio.setScopeLocal(player, device, deviceType, artistId)
+end
+
+function Audio.setMode(player, device, deviceType, scope, mode)
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        if not vehicleId then return false, "No hay dispositivo" end
+        ArgenRadio.Net.send("mode", {
+            vehicle = vehicleId,
+            scope = scope,
+            mode = mode,
+        })
+        return true
+    end
+    return Audio.setModeLocal(device, deviceType, scope, mode)
+end
+
+function Audio.selectTrack(player, device, deviceType, track)
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        if not vehicleId then return false, "No hay dispositivo" end
+        ArgenRadio.Net.send("select", {
+            vehicle = vehicleId,
+            track = track,
+        })
+        return true
+    end
+    return Audio.selectTrackLocal(player, device, deviceType, track)
 end
 
 function Audio.changeTrack(player, device, deviceType, delta)

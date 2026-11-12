@@ -1,164 +1,164 @@
 module Base
 {
-    sound ArgenRadio_RockNacional_1
+    sound ArgenRadio_RockNacional_001
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/rocknacional/track_01.ogg,
+            file = media/sound/argenradio/rocknacional/prueba-a/prueba_1.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_RockNacional_2
+    sound ArgenRadio_RockNacional_002
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/rocknacional/track_02.ogg,
+            file = media/sound/argenradio/rocknacional/prueba-a/prueba_2.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_RockNacional_3
+    sound ArgenRadio_RockNacional_003
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/rocknacional/track_03.ogg,
+            file = media/sound/argenradio/rocknacional/prueba-b/prueba_3.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Cumbia_1
+    sound ArgenRadio_Cumbia_001
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/cumbia/track_01.ogg,
+            file = media/sound/argenradio/cumbia/prueba-a/prueba_1.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Cumbia_2
+    sound ArgenRadio_Cumbia_002
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/cumbia/track_02.ogg,
+            file = media/sound/argenradio/cumbia/prueba-a/prueba_2.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Cumbia_3
+    sound ArgenRadio_Cumbia_003
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/cumbia/track_03.ogg,
+            file = media/sound/argenradio/cumbia/prueba-b/prueba_3.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Cuarteto_1
+    sound ArgenRadio_Cuarteto_001
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/cuarteto/track_01.ogg,
+            file = media/sound/argenradio/cuarteto/prueba-a/prueba_1.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Cuarteto_2
+    sound ArgenRadio_Cuarteto_002
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/cuarteto/track_02.ogg,
+            file = media/sound/argenradio/cuarteto/prueba-a/prueba_2.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Cuarteto_3
+    sound ArgenRadio_Cuarteto_003
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/cuarteto/track_03.ogg,
+            file = media/sound/argenradio/cuarteto/prueba-b/prueba_3.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Lentos_1
+    sound ArgenRadio_Lentos_001
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/lentos/track_01.ogg,
+            file = media/sound/argenradio/lentos/prueba-a/prueba_1.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Lentos_2
+    sound ArgenRadio_Lentos_002
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/lentos/track_02.ogg,
+            file = media/sound/argenradio/lentos/prueba-a/prueba_2.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Lentos_3
+    sound ArgenRadio_Lentos_003
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/lentos/track_03.ogg,
+            file = media/sound/argenradio/lentos/prueba-b/prueba_3.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Folklore_1
+    sound ArgenRadio_Folklore_001
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/folklore/track_01.ogg,
+            file = media/sound/argenradio/folklore/prueba-a/prueba_1.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Folklore_2
+    sound ArgenRadio_Folklore_002
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/folklore/track_02.ogg,
+            file = media/sound/argenradio/folklore/prueba-a/prueba_2.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_Folklore_3
+    sound ArgenRadio_Folklore_003
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/folklore/track_03.ogg,
+            file = media/sound/argenradio/folklore/prueba-b/prueba_3.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_RKT_1
+    sound ArgenRadio_RKT_001
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/rkt/track_01.ogg,
+            file = media/sound/argenradio/rkt/prueba-a/prueba_1.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_RKT_2
+    sound ArgenRadio_RKT_002
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/rkt/track_02.ogg,
+            file = media/sound/argenradio/rkt/prueba-a/prueba_2.ogg,
             distanceMax = 60,
         }
     }
-    sound ArgenRadio_RKT_3
+    sound ArgenRadio_RKT_003
     {
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/rkt/track_03.ogg,
+            file = media/sound/argenradio/rkt/prueba-b/prueba_3.ogg,
             distanceMax = 60,
         }
     }

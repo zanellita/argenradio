@@ -1,14 +1,25 @@
--- ArgenRadio - ventana de radio (etapas 4.1 y 5)
+-- ArgenRadio - ventana de radio (etapas 4.1, 5 y biblioteca 0.6)
 -- Rediseño estilo vanilla: un modulo principal con pantalla de sintonia
 -- (estetica, sin funcion real) y un segundo modulo plegable "Generos".
 -- Se aplica a radios de vehiculo, de casa y portatiles.
 -- No toca televisores ni walkie-talkies (two-way).
+--
+-- El modulo "Generos" es genero -> artista -> canciones:
+--   * clic en un genero cambia de emisora;
+--   * "Todo el genero" reproduce el genero completo;
+--   * clic en un artista limita la reproduccion a ese artista;
+--   * clic en una cancion reproduce ese tema puntual;
+--   * cada ambito (genero / artista) tiene su modo aleatorio o en fila.
+
+require "ISUI/ISScrollingListBox"
 
 local UI_BORDER_SPACING = 10
 local FONT_HGT_SMALL = getTextManager():getFontHeight(UIFont.Small)
 local FONT_HGT_LARGE = getTextManager():getFontHeight(UIFont.Large)
 local BUTTON_HGT = FONT_HGT_SMALL + 8
-local WINDOW_MIN_WIDTH = 430
+local WINDOW_MIN_WIDTH = 560
+local LIB_LIST_H = 132
+local LIB_GAP = 6
 
 -- Paleta de la pantalla de sintonia: fondo liso + acento celeste argentino.
 local LCD_BG      = { r = 0.078, g = 0.086, b = 0.102 } -- #14161A
@@ -20,6 +31,35 @@ local ACCENT_SOFT = { r = 0.694, g = 0.827, b = 0.910 } -- celeste claro
 
 local function stationTitle(station)
     return (station.freq or "--.-") .. "   " .. (station.nombre or "ArgenRadio")
+end
+
+-- Recorta un texto para que no se meta debajo del contador de temas.
+local function fitText(text, maxWidth)
+    text = tostring(text or "")
+    if maxWidth <= 0 then return "" end
+    local tm = getTextManager()
+    if tm:MeasureStringX(UIFont.Small, text) <= maxWidth then return text end
+
+    local ellipsis = "..."
+    local available = maxWidth - tm:MeasureStringX(UIFont.Small, ellipsis)
+    if available <= 0 then return ellipsis end
+
+    local lo, hi = 0, #text
+    while lo < hi do
+        local mid = math.floor((lo + hi + 1) / 2)
+        if tm:MeasureStringX(UIFont.Small, string.sub(text, 1, mid)) <= available then
+            lo = mid
+        else
+            hi = mid - 1
+        end
+    end
+    -- No cortar en medio de un caracter UTF-8 (acentos, enie).
+    while lo > 0 do
+        local byte = string.byte(text, lo + 1)
+        if not byte or byte < 128 or byte > 191 then break end
+        lo = lo - 1
+    end
+    return string.sub(text, 1, lo) .. ellipsis
 end
 
 local function installArgenRadioWindow()
@@ -90,34 +130,56 @@ local function installArgenRadioWindow()
         panel:drawTextRight(freq, right - mhzW - 6, topY,
             ACCENT_SOFT.r, ACCENT_SOFT.g, ACCENT_SOFT.b, 1.0, UIFont.Large)
 
-        -- Centro: nombre de la emisora.
+        -- Centro: nombre de la emisora y ambito actual (artista o genero).
         local nameY = topY + FONT_HGT_LARGE + 6
         panel:drawTextCentre(name, x + w / 2, nameY,
             TEXT_MAIN.r, TEXT_MAIN.g, TEXT_MAIN.b, 1.0, UIFont.Large)
 
-        -- Abajo: tema actual a la izquierda y numero de tema a la derecha.
+        local artistId = state and state.artist or ""
+        local scopeName = ArgenRadio.getScopeName(index, artistId)
+        local scopeColor = (artistId ~= "") and ACCENT_SOFT or TEXT_DIM
+        panel:drawTextCentre(scopeName, x + w / 2, nameY + FONT_HGT_LARGE + 1,
+            scopeColor.r, scopeColor.g, scopeColor.b, 1.0, UIFont.Small)
+
+        -- Abajo: tema actual a la izquierda y posicion + modo a la derecha.
         local ruleY = y + h - 10
         local trackY = ruleY - FONT_HGT_SMALL - 8
-        local tracks = ArgenRadio.getStationTracks(index)
+        local scopeTracks = ArgenRadio.getScopeTracks(index, artistId)
         local trackIndex = state and state.track or 1
-        local track = tracks[trackIndex]
-        local trackTitle = track and track.titulo or "--"
+        local total = #scopeTracks
+        local position = 0
+        for i = 1, total do
+            if scopeTracks[i].index == trackIndex then
+                position = i
+                break
+            end
+        end
+
+        local mode = ArgenRadio.getActiveMode(state)
+        local modeLabel = (mode == ArgenRadio.MODE_LIST) and "En fila" or "Aleatorio"
+        local rightText = tostring(position) .. "/" .. tostring(total)
+            .. "  " .. modeLabel
+        local rightW = getTextManager():MeasureStringX(UIFont.Small, rightText)
+
+        local trackTitle = fitText(
+            ArgenRadio.getTrackTitle(index, trackIndex),
+            (right - left) - 12 - rightW - 10)
 
         local noteY = trackY + FONT_HGT_SMALL - 6
         drawNote(panel, left, noteY, ACCENT.r, ACCENT.g, ACCENT.b, 0.95)
         panel:drawText(trackTitle, left + 12, trackY,
             TEXT_DIM.r, TEXT_DIM.g, TEXT_DIM.b, 1.0, UIFont.Small)
-        panel:drawTextRight(tostring(trackIndex) .. " / " .. tostring(#tracks),
-            right, trackY, TEXT_DIM.r, TEXT_DIM.g, TEXT_DIM.b, 1.0, UIFont.Small)
+        panel:drawTextRight(rightText, right, trackY,
+            TEXT_DIM.r, TEXT_DIM.g, TEXT_DIM.b, 1.0, UIFont.Small)
 
         -- Linea fina inferior (escala) y marca celeste de la emisora.
         panel:drawRect(left, ruleY, right - left, 1, 1.0,
             RULE.r, RULE.g, RULE.b)
 
-        local count = #ArgenRadio.STATIONS
+        local count = #ArgenRadio.getStations()
         local minFreq, maxFreq
         for i = 1, count do
-            local f = tonumber(ArgenRadio.STATIONS[i].freq)
+            local f = tonumber(ArgenRadio.getStations()[i].freq)
             if f then
                 if not minFreq or f < minFreq then minFreq = f end
                 if not maxFreq or f > maxFreq then maxFreq = f end
@@ -151,7 +213,7 @@ local function installArgenRadioWindow()
         self.dialX = UI_BORDER_SPACING + 1
         self.dialY = UI_BORDER_SPACING + 1
         self.dialW = avail
-        self.dialH = math.max(124, FONT_HGT_LARGE * 2 + FONT_HGT_SMALL + 56)
+        self.dialH = math.max(124, FONT_HGT_LARGE * 2 + FONT_HGT_SMALL + 70)
 
         self.controlsY = self.dialY + self.dialH + 10
 
@@ -271,7 +333,7 @@ local function installArgenRadioWindow()
             ArgenRadio.Audio.stop(self.device, self.deviceType)
         else
             -- Si ya se eligio un tema en el dial, respetarlo; si no, que el
-            -- motor elija uno al azar para que no arranque siempre igual.
+            -- motor elija segun el ambito y el modo.
             local track = self.state.trackChosen and self.state.track or nil
             local ok, err = ArgenRadio.Audio.play(
                 self.player, self.device, self.deviceType,
@@ -357,35 +419,73 @@ local function installArgenRadioWindow()
     end
 
     ---------------------------------------------------------------
-    -- Modulo plegable: lista de generos / emisoras
+    -- Modulo plegable: generos, artistas y canciones
     ---------------------------------------------------------------
     RWMArgenRadioStations = RWMPanel:derive("RWMArgenRadioStations")
 
+    function RWMArgenRadioStations:createList(x, y, width)
+        local list = ISScrollingListBox:new(x, y, width, LIB_LIST_H)
+        list:initialise()
+        list:instantiate()
+        list:setFont(UIFont.Small, 3)
+        list.itemheight = FONT_HGT_SMALL + 8
+        list.drawBorder = true
+        list.backgroundColor = { r = LCD_BG.r, g = LCD_BG.g, b = LCD_BG.b, a = 0.55 }
+        list.borderColor = { r = 0.32, g = 0.36, b = 0.42, a = 0.9 }
+        list.textColor = { r = 0.85, g = 0.87, b = 0.90, a = 1.0 }
+        list.selectedTextColor = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 }
+        list.selectionColor = { r = ACCENT.r, g = ACCENT.g, b = ACCENT.b, a = 0.30 }
+        list.mouseOverHighlightColor = { r = 1.0, g = 1.0, b = 1.0, a = 0.10 }
+        self:addChild(list)
+        return list
+    end
+
     function RWMArgenRadioStations:createChildren()
         local pad = UI_BORDER_SPACING
-        local rowGap = 3
-        local rowH = BUTTON_HGT + 2
-        local rowW = self.width - pad * 2 - 2
+        local avail = self.width - pad * 2 - 2
+        local twoGaps = LIB_GAP * 2
+        local colGenre = math.floor((avail - twoGaps) * 0.26)
+        local colArtist = math.floor((avail - twoGaps) * 0.30)
+        local colSong = avail - twoGaps - colGenre - colArtist
 
-        self.rows = {}
-        for i = 1, #ArgenRadio.STATIONS do
-            local station = ArgenRadio.STATIONS[i]
-            local y = pad + (i - 1) * (rowH + rowGap)
-            local row = ISButton:new(pad + 1, y, rowW, rowH,
-                stationTitle(station), self, RWMArgenRadioStations.onSelect)
-            row:initialise()
-            row:setFont(UIFont.Small)
-            row.titleLeft = true
-            row.onClickArgs = { i }
-            row.backgroundColor = { r = 1.0, g = 1.0, b = 1.0, a = 0.02 }
-            row.backgroundColorMouseOver = { r = 1.0, g = 1.0, b = 1.0, a = 0.16 }
-            row.borderColor = { r = 1.0, g = 1.0, b = 1.0, a = 0.12 }
-            row.textColor = { r = 0.85, g = 0.85, b = 0.85, a = 1.0 }
-            self:addChild(row)
-            self.rows[i] = row
+        self.labelY = pad
+        self.labelH = FONT_HGT_SMALL + 4
+        local listY = pad + self.labelH
+        local x1 = pad + 1
+        local x2 = x1 + colGenre + LIB_GAP
+        local x3 = x2 + colArtist + LIB_GAP
+
+        self.genresX = x1
+        self.artistsX = x2
+        self.songsX = x3
+
+        self.genreList = self:createList(x1, listY, colGenre)
+        self.artistList = self:createList(x2, listY, colArtist)
+        self.songList = self:createList(x3, listY, colSong)
+
+        self.genreList:setOnMouseDownFunction(self, RWMArgenRadioStations.onGenreClick)
+        self.artistList:setOnMouseDownFunction(self, RWMArgenRadioStations.onArtistClick)
+        self.songList:setOnMouseDownFunction(self, RWMArgenRadioStations.onSongClick)
+
+        local stations = ArgenRadio.getStations()
+        for i = 1, #stations do
+            self.genreList:addItem(stationTitle(stations[i]), i)
         end
 
-        self:setHeight(pad * 2 + #ArgenRadio.STATIONS * (rowH + rowGap) - rowGap)
+        local btnY = listY + LIB_LIST_H + 8
+        self.genreModeButton = ISButton:new(x1, btnY, colGenre, BUTTON_HGT,
+            "Genero: Aleatorio", self, RWMArgenRadioStations.onGenreMode)
+        self.genreModeButton:initialise()
+        self.genreModeButton:setFont(UIFont.Small)
+        self:addChild(self.genreModeButton)
+
+        self.artistModeButton = ISButton:new(x2, btnY, colArtist, BUTTON_HGT,
+            "Artista: Aleatorio", self, RWMArgenRadioStations.onArtistMode)
+        self.artistModeButton:initialise()
+        self.artistModeButton:setFont(UIFont.Small)
+        self:addChild(self.artistModeButton)
+
+        self:setHeight(btnY + BUTTON_HGT + pad)
     end
 
     function RWMArgenRadioStations:readFromObject(_player, _deviceObject, _deviceData, _deviceType)
@@ -401,55 +501,190 @@ local function installArgenRadioWindow()
         end
 
         self.state = ArgenRadio.Audio.getState(_deviceObject, _deviceType)
-        self.lastSelected = nil
-        self:refresh()
+        self:refreshAll()
         return true
     end
 
     function RWMArgenRadioStations:clear()
         RWMPanel.clear(self)
         self.state = nil
-        self.lastSelected = nil
+        self.lastStation = nil
+        self.lastArtist = nil
+        self.lastTrack = nil
+        self.lastGenreMode = nil
+        self.lastArtistMode = nil
     end
 
-    function RWMArgenRadioStations:refresh()
-        local selected = self.state and self.state.station or 1
-        self.lastSelected = selected
-        for i, row in ipairs(self.rows or {}) do
-            local on = (i == selected)
-            row.backgroundColor.r = on and ACCENT.r or 1.0
-            row.backgroundColor.g = on and ACCENT.g or 1.0
-            row.backgroundColor.b = on and ACCENT.b or 1.0
-            row.backgroundColor.a = on and 0.16 or 0.02
-            row.borderColor.r = on and ACCENT.r or 1.0
-            row.borderColor.g = on and ACCENT.g or 1.0
-            row.borderColor.b = on and ACCENT.b or 1.0
-            row.borderColor.a = on and 0.80 or 0.12
-            row.textColor.r = on and 1.0 or 0.75
-            row.textColor.g = on and 1.0 or 0.75
-            row.textColor.b = on and 1.0 or 0.75
+    function RWMArgenRadioStations:refreshGenres()
+        local state = self.state
+        if not state then return end
+        self.genreList.selected = state.station or 1
+    end
+
+    function RWMArgenRadioStations:refreshArtists()
+        local state = self.state
+        if not state then return end
+
+        local list = self.artistList
+        list:clear()
+        list:addItem("Todo el genero", "")
+        local artists = ArgenRadio.getStationArtists(state.station)
+        for i = 1, #artists do
+            list:addItem(artists[i].nombre or artists[i].id, artists[i].id)
         end
+        list:setYScroll(0)
+    end
+
+    function RWMArgenRadioStations:refreshSongs()
+        local state = self.state
+        if not state then return end
+
+        local list = self.songList
+        list:clear()
+        local tracks = ArgenRadio.getScopeTracks(state.station, state.artist)
+        local showArtist = (state.artist or "") == ""
+        for i = 1, #tracks do
+            local track = tracks[i]
+            local text
+            if showArtist then
+                text = (track.artista or "?") .. " - " .. (track.titulo or "--")
+            else
+                text = track.titulo or "--"
+            end
+            list:addItem(text, track.index, (track.artista or "") .. "\n" .. (track.titulo or ""))
+        end
+        list:setYScroll(0)
+    end
+
+    function RWMArgenRadioStations:refreshButtons()
+        local state = self.state
+        if not state then return end
+        local genreListMode = state.genreMode == ArgenRadio.MODE_LIST and "En fila" or "Aleatorio"
+        local artistListMode = state.artistMode == ArgenRadio.MODE_LIST and "En fila" or "Aleatorio"
+        self.genreModeButton:setTitle("Genero: " .. genreListMode)
+        self.artistModeButton:setTitle("Artista: " .. artistListMode)
+    end
+
+    function RWMArgenRadioStations:refreshSelection()
+        local state = self.state
+        if not state then return end
+
+        self.genreList.selected = state.station or 1
+
+        local artistRow = 1
+        local artistId = state.artist or ""
+        for i, entry in ipairs(self.artistList.items) do
+            if (entry.item or "") == artistId then
+                artistRow = i
+                break
+            end
+        end
+        self.artistList.selected = artistRow
+
+        local songRow = 0
+        for i, entry in ipairs(self.songList.items) do
+            if entry.item == state.track then
+                songRow = i
+                break
+            end
+        end
+        self.songList.selected = songRow
+    end
+
+    function RWMArgenRadioStations:refreshAll()
+        if not self.state then return end
+        self:refreshGenres()
+        self:refreshArtists()
+        self:refreshSongs()
+        self:refreshButtons()
+        self:refreshSelection()
+
+        self.lastStation = self.state.station or 1
+        self.lastArtist = self.state.artist or ""
+        self.lastTrack = self.state.track or 1
+        self.lastGenreMode = self.state.genreMode
+        self.lastArtistMode = self.state.artistMode
     end
 
     function RWMArgenRadioStations:update()
         ISPanel.update(self)
         if not self.device or not self.state then return end
-        local selected = self.state.station or 1
-        if selected ~= self.lastSelected then
-            self:refresh()
+
+        local state = self.state
+        local station = state.station or 1
+        local artist = state.artist or ""
+
+        if station ~= self.lastStation or artist ~= self.lastArtist then
+            self:refreshAll()
+            return
+        end
+
+        if state.track ~= self.lastTrack then
+            self:refreshSelection()
+            self.lastTrack = state.track
+        end
+
+        if state.genreMode ~= self.lastGenreMode or state.artistMode ~= self.lastArtistMode then
+            self:refreshButtons()
+            self.lastGenreMode = state.genreMode
+            self.lastArtistMode = state.artistMode
         end
     end
 
-    -- ISButton llama onclick(target, boton, args...), asi que el primer
-    -- parametro es el panel y no usamos sintaxis de metodo (dos puntos).
-    function RWMArgenRadioStations.onSelect(panel, _button, index)
+    function RWMArgenRadioStations:render()
+        ISPanel.render(self)
+        local dim = TEXT_DIM
+        self:drawText("Generos", self.genresX, self.labelY,
+            dim.r, dim.g, dim.b, 1.0, UIFont.Small)
+        self:drawText("Artistas", self.artistsX, self.labelY,
+            dim.r, dim.g, dim.b, 1.0, UIFont.Small)
+        self:drawText("Canciones (" .. tostring(#self.songList.items) .. ")",
+            self.songsX, self.labelY, dim.r, dim.g, dim.b, 1.0, UIFont.Small)
+    end
+
+    -- ISButton / ISScrollingListBox pasan (panel, ...), por eso no usamos
+    -- sintaxis de metodo (dos puntos) en los handlers.
+    function RWMArgenRadioStations.onGenreClick(panel, stationIndex)
         if not panel.state then return end
         local ok, err = ArgenRadio.Audio.setStation(
-            panel.player, panel.device, panel.deviceType, index)
+            panel.player, panel.device, panel.deviceType, stationIndex)
         if not ok and err then
             print("[ArgenRadio] " .. tostring(err))
         end
-        panel:refresh()
+    end
+
+    function RWMArgenRadioStations.onArtistClick(panel, artistId)
+        if not panel.state then return end
+        local ok, err = ArgenRadio.Audio.setScope(
+            panel.player, panel.device, panel.deviceType, artistId or "")
+        if not ok and err then
+            print("[ArgenRadio] " .. tostring(err))
+        end
+    end
+
+    function RWMArgenRadioStations.onSongClick(panel, trackIndex)
+        if not panel.state then return end
+        local ok, err = ArgenRadio.Audio.selectTrack(
+            panel.player, panel.device, panel.deviceType, trackIndex)
+        if not ok and err then
+            print("[ArgenRadio] " .. tostring(err))
+        end
+    end
+
+    function RWMArgenRadioStations.onGenreMode(panel)
+        if not panel.state then return end
+        local mode = panel.state.genreMode == ArgenRadio.MODE_LIST
+            and ArgenRadio.MODE_RANDOM or ArgenRadio.MODE_LIST
+        ArgenRadio.Audio.setMode(
+            panel.player, panel.device, panel.deviceType, "genre", mode)
+    end
+
+    function RWMArgenRadioStations.onArtistMode(panel)
+        if not panel.state then return end
+        local mode = panel.state.artistMode == ArgenRadio.MODE_LIST
+            and ArgenRadio.MODE_RANDOM or ArgenRadio.MODE_LIST
+        ArgenRadio.Audio.setMode(
+            panel.player, panel.device, panel.deviceType, "artist", mode)
     end
 
     function RWMArgenRadioStations:new(x, y, width, height)
@@ -461,8 +696,21 @@ local function installArgenRadioWindow()
         o.width = width
         o.height = height
         o.state = nil
-        o.lastSelected = nil
-        o.rows = nil
+        o.genreList = nil
+        o.artistList = nil
+        o.songList = nil
+        o.genreModeButton = nil
+        o.artistModeButton = nil
+        o.lastStation = nil
+        o.lastArtist = nil
+        o.lastTrack = nil
+        o.lastGenreMode = nil
+        o.lastArtistMode = nil
+        o.labelY = 0
+        o.labelH = 0
+        o.genresX = 0
+        o.artistsX = 0
+        o.songsX = 0
         return o
     end
 
@@ -470,7 +718,7 @@ local function installArgenRadioWindow()
     -- Enganche en ISRadioWindow (envolver, no pisar)
     ---------------------------------------------------------------
 
-    -- Ventana un poco mas ancha para que la pantalla de sintonia respire.
+    -- Ventana mas ancha para que entren las tres columnas y el dial.
     local baseNew = ISRadioWindow.new
     function ISRadioWindow:new(x, y, width, height, player)
         if width < WINDOW_MIN_WIDTH then width = WINDOW_MIN_WIDTH end
