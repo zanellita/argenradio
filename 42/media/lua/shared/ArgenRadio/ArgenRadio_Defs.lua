@@ -4,7 +4,7 @@
 
 ArgenRadio = ArgenRadio or {}
 
-ArgenRadio.VERSION = "0.6.0"
+ArgenRadio.VERSION = "0.8.0"
 
 -- Modos de reproduccion por ambito. "random" elige al azar (tema inicial,
 -- siguiente y anterior); "list" recorre la lista en orden con vuelta.
@@ -101,17 +101,64 @@ function ArgenRadio.getStationTracks(stationIndex)
 end
 
 -- Temas del ambito actual: todo el genero o un artista puntual.
+-- El resultado se cachea por emisora/artista: el panel lo consulta en cada
+-- fotograma y no conviene recorrer los 90 temas cada vez.
 function ArgenRadio.getScopeTracks(stationIndex, artistId)
     local all = ArgenRadio.getStationTracks(stationIndex)
     if not artistId or artistId == "" then return all end
 
-    local scope = {}
+    local station = ArgenRadio.getStation(stationIndex)
+    if not station then return {} end
+    local cache = station._scopeTracks
+    if not cache then
+        cache = {}
+        station._scopeTracks = cache
+    end
+    local scope = cache[artistId]
+    if scope then return scope end
+
+    scope = {}
     for i = 1, #all do
         if all[i].artistId == artistId then
             scope[#scope + 1] = all[i]
         end
     end
+    cache[artistId] = scope
     return scope
+end
+
+-- Posicion (1..N) de un tema dentro de un ambito, o 0 si no pertenece.
+function ArgenRadio.getScopePosition(stationIndex, artistId, trackIndex)
+    local tracks = ArgenRadio.getScopeTracks(stationIndex, artistId)
+    for i = 1, #tracks do
+        if tracks[i].index == trackIndex then return i end
+    end
+    return 0
+end
+
+-- Duracion del tema en milisegundos, si la biblioteca la tiene.
+function ArgenRadio.getTrackDuration(stationIndex, trackIndex)
+    local track = ArgenRadio.getTrack(stationIndex, trackIndex)
+    return track and tonumber(track.durationMs) or nil
+end
+
+-- Rango de frecuencias para la marca del dial. Se calcula una sola vez.
+function ArgenRadio.getFrequencyRange()
+    if ArgenRadio._freqMin then
+        return ArgenRadio._freqMin, ArgenRadio._freqMax
+    end
+    local stations = ArgenRadio.getStations()
+    local minFreq, maxFreq
+    for i = 1, #stations do
+        local f = tonumber(stations[i].freq)
+        if f then
+            if not minFreq or f < minFreq then minFreq = f end
+            if not maxFreq or f > maxFreq then maxFreq = f end
+        end
+    end
+    ArgenRadio._freqMin = minFreq
+    ArgenRadio._freqMax = maxFreq
+    return minFreq, maxFreq
 end
 
 -- Devuelve el tema y el indice normalizado (1..N).

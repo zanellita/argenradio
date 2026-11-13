@@ -1,0 +1,12 @@
+# ArgenRadio - manifiesto de la importacion. Editable a mano.
+# Formato: clave=valor
+
+carismatico.ogg=Carismático
+como-eran-las-cosas.ogg=Cómo Eran las Cosas
+el-loco.ogg=El loco
+en-privado.ogg=En Privado
+irresponsables.ogg=Irresponsables
+microdancing.ogg=Microdancing
+puesto.ogg=Puesto
+putita.ogg=Putita
+risa.ogg=Risa

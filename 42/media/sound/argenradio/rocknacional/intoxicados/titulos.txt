@@ -1,0 +1,16 @@
+# ArgenRadio - manifiesto de la importacion. Editable a mano.
+# Formato: clave=valor
+
+que-vas-a-hacer-tan-sola-hoy.ogg=¿Qué Vas A Hacer Tan Sola Hoy?
+casi-sin-pensar.ogg=Casi sin Pensar
+esta-saliendo-el-sol.ogg=Esta Saliendo El Sol
+fuego.ogg=Fuego
+fuiste-lo-mejor.ogg=Fuiste lo mejor
+homero.ogg=Homero
+lo-artesanal.ogg=Lo Artesanal
+me-gustas-mucho.ogg=Me Gustas Mucho
+nina-de-tilcara.ogg=Niña de Tilcara
+nunca-quise.ogg=Nunca quise
+quieren-rock.ogg=Quieren Rock
+senor-kioskero.ogg=Señor kioskero
+una-vela.ogg=Una Vela

@@ -1,0 +1,5 @@
+# ArgenRadio - manifiesto de la importacion. Editable a mano.
+# Formato: clave=valor
+
+que-locura-fue-enamorarme-de-ti.ogg=Que Locura Fue Enamorarme de Ti
+te-vi.ogg=Te Vi

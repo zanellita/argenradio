@@ -5,7 +5,7 @@ module Base
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/rocknacional/prueba-a/prueba_1.ogg,
+            file = media/sound/argenradio/rocknacional/andres-calamaro/cartas-sin-marcar.ogg,
             distanceMax = 60,
         }
     }
@@ -14,7 +14,7 @@ module Base
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/rocknacional/prueba-a/prueba_2.ogg,
+            file = media/sound/argenradio/rocknacional/andres-calamaro/crimenes-perfectos.ogg,
             distanceMax = 60,
         }
     }
@@ -23,7 +23,664 @@ module Base
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/rocknacional/prueba-b/prueba_3.ogg,
+            file = media/sound/argenradio/rocknacional/andres-calamaro/cuando-no-estas.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_004
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/andres-calamaro/estadio-azteca.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_005
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/andres-calamaro/loco.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_006
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/andres-calamaro/mi-gin-tonic.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_007
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/andres-calamaro/paloma.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_008
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/andres-calamaro/te-quiero-igual.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_009
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/babasonicos/carismatico.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_010
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/babasonicos/como-eran-las-cosas.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_011
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/babasonicos/el-loco.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_012
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/babasonicos/en-privado.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_013
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/babasonicos/irresponsables.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_014
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/babasonicos/microdancing.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_015
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/babasonicos/puesto.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_016
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/babasonicos/putita.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_017
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/babasonicos/risa.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_018
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/cartas-sin-marcar.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_019
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/cerca-de-la-revolucion.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_020
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/demoliendo-hoteles.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_021
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/el-dia-que-apagaron-la-luz.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_022
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/fanky.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_023
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/hablando-a-tu-corazon.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_024
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/influencia.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_025
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/los-dinosaurios.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_026
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/me-siento-mucho-mejor.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_027
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/no-me-dejan-salir.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_028
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/nos-siguen-pegando-abajo.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_029
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/no-voy-en-tren.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_030
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/promesas-sobre-el-bidet.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_031
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/raros-peinados-nuevos.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_032
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/charly-garcia/seminare.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_033
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/casi-sin-pensar.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_034
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/esta-saliendo-el-sol.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_035
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/fuego.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_036
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/fuiste-lo-mejor.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_037
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/homero.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_038
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/lo-artesanal.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_039
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/me-gustas-mucho.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_040
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/nina-de-tilcara.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_041
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/nunca-quise.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_042
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/que-vas-a-hacer-tan-sola-hoy.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_043
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/quieren-rock.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_044
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/senor-kioskero.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_045
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/intoxicados/una-vela.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_046
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/los-piojos/bicho-de-ciudad.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_047
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/los-piojos/civilizacion.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_048
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/los-piojos/el-farolito.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_049
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/los-piojos/tan-solo.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_050
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/los-piojos/todo-pasa.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_051
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/los-piojos/verano-del-92.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_052
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/los-piojos/vine-hasta-aqui.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_053
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/cana-seca-y-un-membrillo.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_054
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/el-pibe-de-los-astilleros.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_055
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/esa-estrella-era-mi-lujo.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_056
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/ji-ji-ji.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_057
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/la-bestia-pop.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_058
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/mariposa-pontiac.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_059
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/noticias-de-ayer.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_060
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/preso-en-mi-ciudad.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_061
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/queso-ruso.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_062
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/rock-para-los-dientes.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_063
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/te-voy-a-atornillar.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_064
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/un-angel-para-tu-soledad.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_065
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/una-piba-con-la-remera-de-greenpeace.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_066
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/patricio-rey/yo-canibal.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_067
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/amor-descartable.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_068
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/dame-una-senal.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_069
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/encuentro-en-el-rio.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_070
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/hay-que-salir-del-agujero-interior.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_071
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/imagenes-paganas.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_072
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/luna-de-miel.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_073
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/pecados-para-dos.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_074
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/pronta-entrega.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_075
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/superficies-de-placer.ogg,
+            distanceMax = 60,
+        }
+    }
+    sound ArgenRadio_RockNacional_076
+    {
+        category = Vehicle,
+        clip
+        {
+            file = media/sound/argenradio/rocknacional/virus/tomo-lo-que-encuentro.ogg,
             distanceMax = 60,
         }
     }
@@ -32,7 +689,7 @@ module Base
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/cumbia/prueba-a/prueba_1.ogg,
+            file = media/sound/argenradio/cumbia/lechuga/que-locura-fue-enamorarme-de-ti.ogg,
             distanceMax = 60,
         }
     }
@@ -41,16 +698,7 @@ module Base
         category = Vehicle,
         clip
         {
-            file = media/sound/argenradio/cumbia/prueba-a/prueba_2.ogg,
-            distanceMax = 60,
-        }
-    }
-    sound ArgenRadio_Cumbia_003
-    {
-        category = Vehicle,
-        clip
-        {
-            file = media/sound/argenradio/cumbia/prueba-b/prueba_3.ogg,
+            file = media/sound/argenradio/cumbia/lechuga/te-vi.ogg,
             distanceMax = 60,
         }
     }

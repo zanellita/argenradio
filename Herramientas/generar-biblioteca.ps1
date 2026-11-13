@@ -73,6 +73,47 @@ function Get-OggFiles([string]$path) {
     return @(Get-ChildItem -LiteralPath $path -File -Filter "*.ogg" | Sort-Object Name)
 }
 
+# Duracion del .ogg para el marcador de reproduccion del panel. Si no hay
+# ffprobe, la biblioteca se genera igual y el panel oculta el marcador.
+$script:ffprobe = $null
+$ffprobeCmd = Get-Command ffprobe -ErrorAction SilentlyContinue
+if ($ffprobeCmd) { $script:ffprobe = $ffprobeCmd.Source }
+
+function Get-OggDurationMs([string]$path) {
+    if (-not $script:ffprobe) { return $null }
+    try {
+        $raw = & $script:ffprobe -v error -show_entries format=duration `
+            -of default=noprint_wrappers=1:nokey=1 $path 2>$null
+        $sec = [double]0
+        if ([double]::TryParse([string]$raw,
+                [System.Globalization.NumberStyles]::Float,
+                [System.Globalization.CultureInfo]::InvariantCulture,
+                [ref]$sec) -and $sec -gt 0) {
+            return [int][math]::Round($sec * 1000)
+        }
+    } catch {
+    }
+    return $null
+}
+
+# Manifiesto opcional "clave=valor" escrito por importar-canciones.ps1.
+# Sirve para conservar titulos y nombres de artista con acentos, aunque los
+# archivos y carpetas tengan que quedar en ASCII sin espacios.
+function Read-Manifest([string]$path) {
+    $map = @{}
+    if (-not (Test-Path -LiteralPath $path)) { return $map }
+    foreach ($line in [System.IO.File]::ReadAllLines($path, [System.Text.Encoding]::UTF8)) {
+        $trim = $line.Trim()
+        if ($trim -eq "" -or $trim.StartsWith("#")) { continue }
+        $idx = $trim.IndexOf("=")
+        if ($idx -lt 1) { continue }
+        $key = $trim.Substring(0, $idx).Trim().ToLowerInvariant()
+        $val = $trim.Substring($idx + 1).Trim()
+        if ($key -ne "" -and $val -ne "") { $map[$key] = $val }
+    }
+    return $map
+}
+
 if (-not (Test-Path -LiteralPath $soundRoot)) {
     throw "No existe la carpeta de musica: $soundRoot"
 }
@@ -81,6 +122,7 @@ $libraryLines = New-Object System.Collections.Generic.List[string]
 $scriptLines = New-Object System.Collections.Generic.List[string]
 $totalSongs = 0
 $totalArtists = 0
+$totalDurations = 0
 
 $libraryLines.Add("-- ArgenRadio - biblioteca generada automaticamente.")
 $libraryLines.Add("-- No editar a mano: ejecutar Herramientas\generar-biblioteca.cmd")
@@ -100,12 +142,18 @@ foreach ($genre in $genres) {
 
     if (Test-Path -LiteralPath $genreDir) {
         $usedIds = @{}
+        $artistNames = Read-Manifest (Join-Path $genreDir "artistas.txt")
         $artistDirs = @(Get-ChildItem -LiteralPath $genreDir -Directory | Sort-Object Name)
         foreach ($dir in $artistDirs) {
             $files = Get-OggFiles $dir.FullName
             if ($files.Count -eq 0) { continue }
 
-            $display = ConvertTo-DisplayName $dir.Name
+            $folderKey = $dir.Name.ToLowerInvariant()
+            if ($artistNames.ContainsKey($folderKey)) {
+                $display = $artistNames[$folderKey]
+            } else {
+                $display = ConvertTo-DisplayName $dir.Name
+            }
             $id = ConvertTo-Slug $dir.Name
             if ($usedIds.ContainsKey($id)) {
                 $n = 2
@@ -119,6 +167,7 @@ foreach ($genre in $genres) {
                 id = $id
                 nombre = $display
                 files = $files
+                titles = Read-Manifest (Join-Path $dir.FullName "titulos.txt")
             }
         }
 
@@ -130,6 +179,7 @@ foreach ($genre in $genres) {
                 id = "sueltos"
                 nombre = "Sueltos"
                 files = $rootFiles
+                titles = Read-Manifest (Join-Path $genreDir "titulos.txt")
             }
         }
     }
@@ -153,9 +203,20 @@ foreach ($genre in $genres) {
             $songNumber++
             $totalSongs++
             $soundName = "ArgenRadio_$($genre.key)_" + $songNumber.ToString("000")
-            $title = ConvertTo-SongTitle $file.Name
+            $titleKey = $file.Name.ToLowerInvariant()
+            if ($artist.titles.ContainsKey($titleKey)) {
+                $title = $artist.titles[$titleKey]
+            } else {
+                $title = ConvertTo-SongTitle $file.Name
+            }
 
-            $libraryLines.Add("                        { sound = `"$soundName`", titulo = `"$(ConvertTo-LuaString $title)`", artista = `"$(ConvertTo-LuaString $artist.nombre)`" },")
+            $durationMs = Get-OggDurationMs $file.FullName
+            $durationField = ""
+            if ($null -ne $durationMs) {
+                $durationField = ", durationMs = $durationMs"
+                $totalDurations++
+            }
+            $libraryLines.Add("                        { sound = `"$soundName`", titulo = `"$(ConvertTo-LuaString $title)`", artista = `"$(ConvertTo-LuaString $artist.nombre)`"$durationField },")
 
             if ($artist.folder -eq "") {
                 $relative = "media/sound/argenradio/$($genre.folder)/$($file.Name)"
@@ -193,5 +254,6 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 Write-Host ""
 Write-Host ("Listo: " + $totalSongs + " canciones, " + $totalArtists + " artistas, " + $genres.Count + " generos.")
+Write-Host ("Duraciones: " + $totalDurations + "/" + $totalSongs + " (ffprobe: " + $(if ($script:ffprobe) { "si" } else { "no encontrado" }) + ")")
 Write-Host ("Biblioteca: " + $libraryPath)
 Write-Host ("Sound scripts: " + $scriptsPath)

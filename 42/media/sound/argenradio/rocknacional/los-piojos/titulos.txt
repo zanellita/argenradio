@@ -1,0 +1,10 @@
+# ArgenRadio - manifiesto de la importacion. Editable a mano.
+# Formato: clave=valor
+
+bicho-de-ciudad.ogg=Bicho de ciudad
+civilizacion.ogg=Civilización
+el-farolito.ogg=El farolito
+tan-solo.ogg=Tan solo
+vine-hasta-aqui.ogg=Vine Hasta Aquí
+todo-pasa.ogg=Todo Pasa
+verano-del-92.ogg=Verano del 92

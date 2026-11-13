@@ -199,7 +199,10 @@ local function onClientCommand(module, command, player, args)
         end
 
         local requested = tonumber(args.track)
-        if requested then
+        if args.start == true then
+            -- "Reproducir" sin tema puntual: arranca el ambito segun el modo.
+            state.track = ArgenRadio.Playlist.pickStart(state, randTrack) or state.track
+        elseif requested then
             local _, trackIndex = ArgenRadio.getTrack(state.station, requested)
             if trackInScope(state.station, state.artist, trackIndex) then
                 state.track = trackIndex

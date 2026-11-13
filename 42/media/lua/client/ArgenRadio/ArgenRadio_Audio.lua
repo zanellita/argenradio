@@ -20,6 +20,18 @@ local Audio = ArgenRadio.Audio
 local DEFAULT_VOLUME = 0.7
 -- Margen para no confundir "todavia no arranco" con "ya termino".
 local ADVANCE_GRACE_MS = 1500
+-- El final del tema y la posicion de los emisores no necesitan revisarse en
+-- cada fotograma: con 150 ms el avance automatico sigue siendo inmediato.
+local UPDATE_CHECK_MS = 150
+
+-- Diagnostico temporal de rendimiento (0.8.0): una linea cada 5 segundos
+-- mientras hay musica. Sirve para distinguir el lag del mod (audio/UI) del
+-- lag del juego o de la placa de video. Se puede apagar con PERF_LOG = false.
+ArgenRadio.PERF_LOG = ArgenRadio.PERF_LOG ~= false
+local PERF_INTERVAL_MS = 5000
+local perfNextMs = 0
+local perfAudioMs = 0
+local perfTicks = 0
 
 -- Estado por dispositivo (emisora, artista, modo, tema, encendido, volumen).
 local states = {}
@@ -149,6 +161,14 @@ function Audio.isPlaying(device, deviceType)
     return sessions[key] ~= nil
 end
 
+-- Sesion de reproduccion del dispositivo (solo lectura para el panel).
+-- Devuelve nil si ese dispositivo no esta sonando.
+function Audio.getPlayback(device, deviceType)
+    local key = deviceKey(device, deviceType)
+    if not key then return nil end
+    return sessions[key]
+end
+
 function Audio.stopLocal(device, deviceType)
     local key = deviceKey(device, deviceType)
     if not key then return false end
@@ -168,7 +188,10 @@ end
 
 -- Devuelve true si arranco, o false + motivo si no.
 -- track es opcional: si no viene, se elige segun el ambito y el modo.
-function Audio.playLocal(player, device, deviceType, station, volume, track)
+-- artist es opcional: nil conserva el ambito actual; "" es "todo el genero".
+-- Se usa desde el boton "Reproducir" del panel para aplicar emisora,
+-- artista y tema en un solo paso.
+function Audio.playLocal(player, device, deviceType, station, volume, track, artist)
     if not device then
         return false, "No hay dispositivo"
     end
@@ -186,6 +209,17 @@ function Audio.playLocal(player, device, deviceType, station, volume, track)
         state.station = stationIndex
         state.artist = ""
         state.history = {}
+    end
+
+    if artist ~= nil then
+        artist = tostring(artist or "")
+        if not ArgenRadio.isValidArtist(stationIndex, artist) then
+            artist = ""
+        end
+        if artist ~= state.artist then
+            state.artist = artist
+            state.history = {}
+        end
     end
 
     local tracks = ArgenRadio.getStationTracks(stationIndex)
@@ -252,6 +286,8 @@ function Audio.playLocal(player, device, deviceType, station, volume, track)
         station = stationIndex,
         track = track,
         startMs = getTimestampMs and getTimestampMs() or 0,
+        durationMs = ArgenRadio.getTrackDuration(stationIndex, track),
+        nextCheckMs = 0,
     }
 
     state.playing = true
@@ -521,6 +557,41 @@ function Audio.play(player, device, deviceType, station, volume, track)
     return Audio.playLocal(player, device, deviceType, station, volume, track)
 end
 
+-- Reproduce la seleccion local del panel (emisora + artista + tema).
+-- Si track es nil, el motor arranca un tema del ambito segun el modo.
+-- En multijugador viaja como un solo comando "play" autoritativo, asi el
+-- resto de los jugadores escucha el cambio recien cuando se aprieta.
+function Audio.playSelection(player, device, deviceType, station, artist, track)
+    if not device then return false, "No hay dispositivo" end
+
+    local state = Audio.getState(device, deviceType)
+    local _, stationIndex = ArgenRadio.getStation(station or state.station)
+
+    artist = tostring(artist or "")
+    if not ArgenRadio.isValidArtist(stationIndex, artist) then
+        artist = ""
+    end
+
+    if shouldSync(deviceType) then
+        local vehicleId = vehicleIdOf(device)
+        if not vehicleId then return false, "No hay dispositivo" end
+        ArgenRadio.Net.send("play", {
+            vehicle = vehicleId,
+            station = stationIndex,
+            artist = artist,
+            track = tonumber(track),
+            -- Sin tema puntual: el servidor elige el arranque del ambito
+            -- (aleatorio o primero en fila) en vez de conservar el actual.
+            start = (track == nil),
+            volume = state.volume,
+        })
+        return true
+    end
+
+    return Audio.playLocal(player, device, deviceType,
+        stationIndex, state.volume, track, artist)
+end
+
 function Audio.stop(device, deviceType)
     if shouldSync(deviceType) then
         local vehicleId = vehicleIdOf(device)
@@ -616,19 +687,23 @@ function Audio.setMuted(device, deviceType, muted)
 end
 
 -- Mantiene las sesiones vivas, actualiza la posicion de las portatiles y
--- pasa al tema siguiente cuando termina el actual.
+-- pasa al tema siguiente cuando termina el actual. Las consultas nativas
+-- caras (isPlaying, setPos) se espacian a UPDATE_CHECK_MS.
 function Audio.update()
     local now = getTimestampMs and getTimestampMs() or 0
     local advance = {}
+    local sessionCount = 0
 
     for key, session in pairs(sessions) do
+        sessionCount = sessionCount + 1
         local alive = true
 
         if session.deviceType == "InventoryItem" then
             if not isEquipped(session.player, session.device) then
                 alive = false
-            elseif session.player then
+            elseif session.player and now >= (session.nextPosMs or 0) then
                 -- La radio portatil sigue al jugador que la tiene puesta.
+                session.nextPosMs = now + UPDATE_CHECK_MS
                 session.emitter:setPos(session.player:getX(), session.player:getY(), session.player:getZ())
             end
         elseif session.deviceType == "IsoObject" then
@@ -644,7 +719,8 @@ function Audio.update()
 
         if not alive then
             Audio.stopLocal(session.device, session.deviceType)
-        elseif session.emitter and session.soundID then
+        elseif session.emitter and session.soundID and now >= (session.nextCheckMs or 0) then
+            session.nextCheckMs = now + UPDATE_CHECK_MS
             if not session.emitter:isPlaying(session.soundID) then
                 if now - (session.startMs or 0) > ADVANCE_GRACE_MS then
                     if shouldSync(session.deviceType) then
@@ -675,6 +751,44 @@ function Audio.update()
         -- Si mientras tanto se cambio de tema/emisora, esta sesion ya no vale.
         if session.key and sessions[session.key] == session then
             Audio.nextTrack(session.player, session.device, session.deviceType)
+        end
+    end
+
+    if ArgenRadio.PERF_LOG then
+        if sessionCount == 0 then
+            perfAudioMs = 0
+            perfTicks = 0
+            return
+        end
+        local finished = getTimestampMs and getTimestampMs() or now
+        perfAudioMs = perfAudioMs + (finished - now)
+        perfTicks = perfTicks + 1
+        if now >= perfNextMs then
+            perfNextMs = now + PERF_INTERVAL_MS
+            local fps, avg, cpuWait, gpuTime = "?", "?", "?", "?"
+            if getPerformance then fps = tostring(getPerformance():getFramerate()) end
+            if getAverageFPS then avg = tostring(getAverageFPS()) end
+            if getCPUWait then cpuWait = tostring(getCPUWait()) end
+            if getGPUTime then gpuTime = tostring(getGPUTime()) end
+            local panelAge = now - (ArgenRadio._panelActiveMs or -1000000)
+            local panel = panelAge <= 500 and "abierto" or "cerrado"
+            local scopeTracks = 0
+            local state = nil
+            for _, session in pairs(sessions) do
+                state = Audio.getState(session.device, session.deviceType)
+                break
+            end
+            if state then
+                scopeTracks = #ArgenRadio.getScopeTracks(state.station, state.artist)
+            end
+            local audioAvg = perfTicks > 0 and math.floor((perfAudioMs / perfTicks) * 100 + 0.5) / 100 or 0
+            print("[ArgenRadio] perf fps=" .. fps .. " prom=" .. avg
+                .. " cpuEspera=" .. cpuWait .. " gpu=" .. gpuTime
+                .. " audio=" .. tostring(audioAvg) .. "ms"
+                .. " panel=" .. panel .. " temas=" .. tostring(scopeTracks)
+                .. " sesiones=" .. tostring(sessionCount))
+            perfAudioMs = 0
+            perfTicks = 0
         end
     end
 end

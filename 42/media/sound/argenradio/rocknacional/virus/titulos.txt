@@ -1,0 +1,13 @@
+# ArgenRadio - manifiesto de la importacion. Editable a mano.
+# Formato: clave=valor
+
+amor-descartable.ogg=Amor Descartable
+dame-una-senal.ogg=Dame una Señal
+encuentro-en-el-rio.ogg=Encuentro en el Río
+hay-que-salir-del-agujero-interior.ogg=Hay Que Salir del Agujero Interior
+imagenes-paganas.ogg=Imágenes Paganas
+luna-de-miel.ogg=Luna De Miel
+pecados-para-dos.ogg=Pecados para Dos
+pronta-entrega.ogg=Pronta Entrega
+superficies-de-placer.ogg=Superficies de Placer
+tomo-lo-que-encuentro.ogg=Tomo Lo Que Encuentro

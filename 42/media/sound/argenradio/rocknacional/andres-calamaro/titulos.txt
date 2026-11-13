@@ -1,0 +1,11 @@
+# ArgenRadio - manifiesto de la importacion. Editable a mano.
+# Formato: clave=valor
+
+cartas-sin-marcar.ogg=Cartas Sin Marcar
+crimenes-perfectos.ogg=Crímenes perfectos
+cuando-no-estas.ogg=Cuando no estás
+estadio-azteca.ogg=Estadio Azteca
+loco.ogg=Loco
+mi-gin-tonic.ogg=Mi gin tonic
+paloma.ogg=Paloma
+te-quiero-igual.ogg=Te quiero igual

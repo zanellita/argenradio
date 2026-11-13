@@ -1,0 +1,17 @@
+# ArgenRadio - manifiesto de la importacion. Editable a mano.
+# Formato: clave=valor
+
+cana-seca-y-un-membrillo.ogg=Caña seca y un membrillo
+el-pibe-de-los-astilleros.ogg=El pibe de los astilleros
+esa-estrella-era-mi-lujo.ogg=Esa Estrella Era Mi Lujo
+ji-ji-ji.ogg=Ji ji ji
+la-bestia-pop.ogg=La Bestia Pop
+mariposa-pontiac.ogg=Mariposa Pontiac
+noticias-de-ayer.ogg=Noticias de Ayer
+preso-en-mi-ciudad.ogg=Preso en mi Ciudad
+queso-ruso.ogg=Queso ruso
+rock-para-los-dientes.ogg=Rock para los Dientes
+te-voy-a-atornillar.ogg=Te voy a Atornillar
+un-angel-para-tu-soledad.ogg=Un ángel para tu soledad
+una-piba-con-la-remera-de-greenpeace.ogg=Una piba con la remera de Greenpeace
+yo-canibal.ogg=Yo canibal

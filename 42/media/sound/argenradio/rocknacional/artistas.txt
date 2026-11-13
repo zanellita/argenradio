@@ -1,0 +1,10 @@
+# ArgenRadio - manifiesto de la importacion. Editable a mano.
+# Formato: clave=valor
+
+andres-calamaro=Andrés Calamaro
+babasonicos=Babásonicos
+charly-garcia=Charly García
+intoxicados=Intoxicados
+los-piojos=Los Piojos
+patricio-rey=Patricio Rey
+virus=Virus
